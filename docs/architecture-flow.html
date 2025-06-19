@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Power Platform Orchestration Agent - Architecture Flow</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.6;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            color: #333;
+        }
+        h1 { color: #2c5aa0; border-bottom: 3px solid #2c5aa0; padding-bottom: 10px; }
+        h2 { color: #5d4e75; border-bottom: 2px solid #e1e4e8; padding-bottom: 5px; }
+        h3 { color: #6a737d; }
+        .mermaid { 
+            text-align: center; 
+            margin: 20px 0;
+            background: #f8f9fa;
+            border: 1px solid #e1e4e8;
+            border-radius: 6px;
+            padding: 20px;
+        }
+        table { 
+            border-collapse: collapse; 
+            width: 100%; 
+            margin: 20px 0;
+        }
+        th, td { 
+            border: 1px solid #e1e4e8; 
+            padding: 12px; 
+            text-align: left; 
+        }
+        th { 
+            background-color: #f6f8fa; 
+            font-weight: 600;
+        }
+        .highlight-box {
+            background: #f1f8ff;
+            border: 1px solid #c9e6ff;
+            border-radius: 6px;
+            padding: 16px;
+            margin: 16px 0;
+        }
+        .performance-box {
+            background: #f0fff4;
+            border: 1px solid #c6f6d5;
+            border-radius: 6px;
+            padding: 16px;
+            margin: 16px 0;
+        }
+        code {
+            background: #f6f8fa;
+            padding: 2px 4px;
+            border-radius: 3px;
+            font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+        }
+        @media print {
+            body { margin: 0; padding: 10px; }
+            .mermaid { page-break-inside: avoid; }
+        }
+    </style>
+</head>
+<body>
+
+<h1>Power Platform Orchestration Agent - Architecture Flow</h1>
+
+<div class="highlight-box">
+<h2>🎯 Executive Summary</h2>
+<p>This document outlines the complete architecture and execution flow of the Power Platform Orchestration Agent, showing how it automates enterprise-level Power Platform project setup through intelligent orchestration of Microsoft Graph, Azure DevOps, and Power Platform APIs.</p>
+</div>
+
+<h2>High-Level Sequence Diagram</h2>
+
+<div class="mermaid">
+sequenceDiagram
+    participant User as 👤 User
+    participant Claude as 🤖 Claude Desktop
+    participant Orch as 🎭 PRD Orchestrator
+    participant Graph as 📊 Microsoft Graph MCP
+    participant ADO as 🔧 Azure DevOps MCP
+    participant PP as ⚡ Power Platform MCP
+    participant AAD as 🔐 Azure AD
+    participant DevOps as 📋 Azure DevOps
+    participant Dataverse as 💾 Dataverse
+
+    Note over User, Dataverse: Phase 1: PRD Creation & Parsing
+    User->>Claude: "Create Power Platform project from PRD"
+    Claude->>Orch: Import PRD (YAML/JSON/Markdown)
+    Orch->>Orch: Parse & validate PRD
+    Orch->>Orch: Generate work breakdown structure
+    
+    Note over User, Dataverse: Phase 2: Foundation Setup (Sequential)
+    Orch->>Graph: Create Azure AD App Registration
+    Graph->>AAD: POST /applications
+    AAD-->>Graph: App ID + Object ID
+    Graph->>AAD: Add client secret
+    AAD-->>Graph: Client Secret
+    Graph->>AAD: Grant admin consent
+    AAD-->>Graph: Permissions granted
+    Graph->>Graph: Save credentials to .env
+    Graph-->>Orch: ✅ App Registration Complete
+
+    Note over User, Dataverse: Phase 3: Parallel Infrastructure Setup
+    par Azure DevOps Setup
+        Orch->>ADO: Create project
+        ADO->>DevOps: POST /projects
+        DevOps-->>ADO: Project created
+        
+        ADO->>DevOps: Create epics
+        DevOps-->>ADO: Epics created
+        
+        ADO->>DevOps: Create features  
+        DevOps-->>ADO: Features created
+        
+        ADO->>DevOps: Create user stories
+        DevOps-->>ADO: Stories created
+        
+        ADO->>DevOps: Create sprints
+        DevOps-->>ADO: Sprints created
+        
+        ADO-->>Orch: ✅ Azure DevOps Complete
+        
+    and Power Platform Setup
+        Orch->>PP: Create publisher
+        PP->>Dataverse: POST /publishers
+        Dataverse-->>PP: Publisher created
+        
+        PP->>Dataverse: POST /solutions
+        Dataverse-->>PP: Solution created
+        
+        PP->>Dataverse: Create custom tables
+        Dataverse-->>PP: Tables created
+        
+        PP->>Dataverse: Create relationships
+        Dataverse-->>PP: Relationships created
+        
+        PP-->>Orch: ✅ Power Platform Complete
+    end
+
+    Note over User, Dataverse: Phase 4: Cross-System Integration (Sequential)
+    Orch->>Graph: Create Azure DevOps Service Connection
+    Graph->>DevOps: POST /serviceConnections (Power Platform type)
+    DevOps-->>Graph: Service connection created
+    Graph-->>Orch: ✅ Service Connection Complete
+
+    Orch->>PP: Create Application Users (per environment)
+    loop For each environment
+        PP->>Dataverse: POST /systemusers (Application User)
+        Dataverse-->>PP: User created
+        PP->>Dataverse: Assign System Administrator role
+        Dataverse-->>PP: Role assigned
+    end
+    PP-->>Orch: ✅ Application Users Complete
+
+    Note over User, Dataverse: Phase 5: Auto-Complete Technical Stories
+    Orch->>ADO: Mark technical stories as complete
+    ADO->>DevOps: PATCH /workitems (Close technical stories)
+    DevOps-->>ADO: Stories closed
+    ADO-->>Orch: ✅ Technical Stories Complete
+
+    Note over User, Dataverse: Phase 6: Project Ready
+    Orch-->>Claude: 🎉 Project orchestration complete
+    Claude-->>User: ✅ Power Platform project ready for development!
+</div>
+
+<h2>Parallel vs Sequential Operations</h2>
+
+<h3>🔄 Parallel Operations (Can run simultaneously)</h3>
+
+<h4>Phase 3: Infrastructure Setup</h4>
+<div class="mermaid">
+graph TB
+    subgraph "Parallel Execution"
+        subgraph "Azure DevOps Track"
+            A1[Create Project] --> A2[Create Epics]
+            A2 --> A3[Create Features]
+            A3 --> A4[Create User Stories]
+            A4 --> A5[Create Sprints]
+        end
+        
+        subgraph "Power Platform Track"
+            B1[Create Publisher] --> B2[Create Solution]
+            B2 --> B3[Create Tables]
+            B3 --> B4[Create Relationships]
+            B4 --> B5[Add to Solution]
+        end
+    end
+    
+    A5 --> C[Integration Phase]
+    B5 --> C[Integration Phase]
+    
+    style A1 fill:#e1f5fe
+    style A2 fill:#e1f5fe
+    style A3 fill:#e1f5fe
+    style A4 fill:#e1f5fe
+    style A5 fill:#e1f5fe
+    style B1 fill:#f3e5f5
+    style B2 fill:#f3e5f5
+    style B3 fill:#f3e5f5
+    style B4 fill:#f3e5f5
+    style B5 fill:#f3e5f5
+</div>
+
+<h3>⚡ Sequential Operations (Must be done in order)</h3>
+
+<h4>Critical Dependencies</h4>
+<div class="mermaid">
+graph TD
+    subgraph "Sequential Dependencies"
+        S1[1. App Registration] --> S2[2. Service Connection]
+        S2 --> S3[3. Application Users]
+        S3 --> S4[4. Complete Technical Stories]
+    end
+    
+    subgraph "Why Sequential?"
+        R1["App ID needed for<br/>Service Connection"] 
+        R2["Service Connection needed<br/>for deployment automation"]
+        R3["App Registration needed<br/>for Application Users"]
+        R4["Infrastructure complete<br/>before story completion"]
+    end
+    
+    S1 -.-> R1
+    S2 -.-> R2
+    S3 -.-> R3
+    S4 -.-> R4
+    
+    style S1 fill:#ffcdd2
+    style S2 fill:#ffcdd2
+    style S3 fill:#ffcdd2
+    style S4 fill:#ffcdd2
+</div>
+
+<h2>System Architecture Overview</h2>
+
+<div class="mermaid">
+graph TB
+    subgraph "User Interface"
+        Claude[🤖 Claude Desktop]
+        PRD[📄 PRD Assistant]
+    end
+    
+    subgraph "Orchestration Layer"
+        Orch[🎭 PRD Orchestrator]
+        API[🌐 REST API]
+    end
+    
+    subgraph "MCP Servers"
+        GraphMCP[📊 Microsoft Graph MCP]
+        ADOMCP[🔧 Azure DevOps MCP] 
+        PPMCP[⚡ Power Platform MCP]
+    end
+    
+    subgraph "Microsoft Cloud Services"
+        AAD[🔐 Azure AD]
+        DevOps[📋 Azure DevOps]
+        PP[🏢 Power Platform]
+        Dataverse[💾 Dataverse]
+    end
+    
+    Claude --> Orch
+    PRD --> Orch
+    Orch --> API
+    
+    API --> GraphMCP
+    API --> ADOMCP
+    API --> PPMCP
+    
+    GraphMCP --> AAD
+    ADOMCP --> DevOps
+    PPMCP --> PP
+    PPMCP --> Dataverse
+    
+    style Claude fill:#e3f2fd
+    style Orch fill:#fff3e0
+    style GraphMCP fill:#f1f8e9
+    style ADOMCP fill:#f1f8e9
+    style PPMCP fill:#f1f8e9
+    style AAD fill:#fce4ec
+    style DevOps fill:#fce4ec
+    style PP fill:#fce4ec
+    style Dataverse fill:#fce4ec
+</div>
+
+<div class="performance-box">
+<h2>⏱️ Timing & Performance Optimization</h2>
+
+<h3>Estimated Execution Times</h3>
+<table>
+<tr><th>Phase</th><th>Operation</th><th>Time</th><th>Notes</th></tr>
+<tr><td>1</td><td>PRD Parsing</td><td>1-2s</td><td>Local processing</td></tr>
+<tr><td>2</td><td>App Registration</td><td>5-10s</td><td>Azure AD API calls</td></tr>
+<tr><td>3a</td><td>Azure DevOps Setup</td><td>15-30s</td><td>Project + work items</td></tr>
+<tr><td>3b</td><td>Power Platform Setup</td><td>20-40s</td><td>Publisher + solution + tables</td></tr>
+<tr><td>4</td><td>Service Connection</td><td>3-5s</td><td>Single API call</td></tr>
+<tr><td>5</td><td>Application Users</td><td>5-10s per env</td><td>Role assignment included</td></tr>
+<tr><td>6</td><td>Story Completion</td><td>2-5s</td><td>Bulk update</td></tr>
+</table>
+
+<p><strong>Total Time: ~45-90 seconds</strong> (depending on complexity)</p>
+
+<h3>🚀 Performance Benefits of Parallel Execution</h3>
+<ul>
+<li><strong>Without Parallelization:</strong> 60-100 seconds total</li>
+<li><strong>With Parallelization:</strong> 45-90 seconds total</li>
+<li><strong>Time Savings:</strong> 15-25% reduction</li>
+</ul>
+</div>
+
+<h2>Error Handling & Rollback Strategy</h2>
+
+<div class="mermaid">
+graph TD
+    subgraph "Error Scenarios"
+        E1[App Registration Fails]
+        E2[Azure DevOps Fails]
+        E3[Power Platform Fails]
+        E4[Service Connection Fails]
+        E5[Application User Fails]
+    end
+    
+    subgraph "Rollback Actions"
+        R1[Skip dependent operations]
+        R2[Continue with Power Platform]
+        R3[Continue with Azure DevOps]
+        R4[Manual service connection required]
+        R5[Manual user creation required]
+    end
+    
+    E1 --> R1
+    E2 --> R2
+    E3 --> R3
+    E4 --> R4
+    E5 --> R5
+    
+    style E1 fill:#ffcdd2
+    style E2 fill:#ffcdd2
+    style E3 fill:#ffcdd2
+    style E4 fill:#ffcdd2
+    style E5 fill:#ffcdd2
+    style R1 fill:#c8e6c9
+    style R2 fill:#c8e6c9
+    style R3 fill:#c8e6c9
+    style R4 fill:#fff9c4
+    style R5 fill:#fff9c4
+</div>
+
+<div class="highlight-box">
+<h2>🎯 Key Design Decisions</h2>
+
+<h3>Why This Sequence?</h3>
+<ol>
+<li><strong>App Registration First:</strong> Everything depends on having valid Azure AD credentials</li>
+<li><strong>Parallel Infrastructure:</strong> Azure DevOps and Power Platform are independent</li>
+<li><strong>Service Connection After:</strong> Needs App Registration to exist</li>
+<li><strong>Application Users Last:</strong> Requires both App Registration and environments to exist</li>
+<li><strong>Story Completion Final:</strong> All infrastructure must be ready before marking complete</li>
+</ol>
+
+<h3>🔧 MCP Server Benefits</h3>
+<ul>
+<li><strong>Modularity:</strong> Each system has dedicated MCP server</li>
+<li><strong>Reliability:</strong> Direct REST API calls, no CLI dependencies</li>
+<li><strong>Authentication:</strong> Proper OAuth 2.0 + interactive fallback</li>
+<li><strong>Error Handling:</strong> Granular error reporting per system</li>
+<li><strong>Testability:</strong> Individual MCP servers can be tested independently</li>
+</ul>
+
+<h3>🌟 Tool-Agnostic Integration</h3>
+<p>The orchestrator can accept PRDs from:</p>
+<ul>
+<li><strong>Claude Desktop:</strong> Natural conversation + PRD Assistant</li>
+<li><strong>GitHub Copilot:</strong> Exported PRD documents</li>
+<li><strong>Manual Input:</strong> Direct YAML/JSON/Markdown upload</li>
+<li><strong>Templates:</strong> Pre-built project templates</li>
+<li><strong>File Import:</strong> Local or remote PRD files</li>
+</ul>
+</div>
+
+<p><em>This design ensures maximum flexibility while maintaining robust automation capabilities across the entire Microsoft ecosystem.</em></p>
+
+<script>
+    mermaid.initialize({ 
+        startOnLoad: true,
+        theme: 'default',
+        flowchart: {
+            useMaxWidth: true,
+            htmlLabels: true
+        },
+        sequence: {
+            useMaxWidth: true,
+            wrap: true
+        }
+    });
+</script>
+
+</body>
+</html>
