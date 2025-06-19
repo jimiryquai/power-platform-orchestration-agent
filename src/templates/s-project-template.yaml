@@ -1,0 +1,135 @@
+projectTemplate:
+  name: "S Project Template"
+  description: "Standard 12-week Power Platform project"
+  version: "1.0.0"
+  duration: 12 # weeks
+  sprintDuration: 2 # weeks
+  sprintCount: 6
+  
+  environments:
+    - name: "Development"
+      shortName: "dev"
+      type: "development"
+      region: "northeurope"
+      description: "Development environment for active development"
+      settings:
+        dataverse: true
+        backupEnabled: false
+        dlpPolicies: "development"
+    - name: "Test"
+      shortName: "test"
+      type: "test"
+      region: "northeurope"
+      description: "Test environment for UAT and integration testing"
+      settings:
+        dataverse: true
+        backupEnabled: true
+        dlpPolicies: "test"
+    - name: "Production"
+      shortName: "prod"
+      type: "production"
+      region: "northeurope"
+      description: "Production environment for live workloads"
+      settings:
+        dataverse: true
+        backupEnabled: true
+        dlpPolicies: "production"
+
+  azureDevOps:
+    processTemplate: "Agile"
+    repositoryStrategy: "GitFlow"
+    branchingPolicies:
+      - branch: "main"
+        requirePullRequest: true
+        minimumReviewers: 2
+      - branch: "develop"
+        requirePullRequest: true
+        minimumReviewers: 1
+    pipelineTemplates:
+      - "CI-PowerPlatform"
+      - "CD-Multi-Environment"
+    workItemTypes:
+      - "Epic"
+      - "Feature"
+      - "User Story"
+      - "Task"
+      - "Bug"
+
+  dataModel:
+    baseEntities:
+      - "Account"
+      - "Contact"
+      - "Activity"
+    customEntities: []
+    securityModel: "Standard"
+    auditingEnabled: true
+
+workItemTemplates:
+  epics:
+    - name: "Environment Setup"
+      description: "Configure development, test, and production environments"
+      estimatedEffort: "1 sprint"
+      priority: 1
+      features:
+        - "Development Environment Configuration"
+        - "Test Environment Configuration" 
+        - "Production Environment Configuration"
+    
+    - name: "Data Model Implementation"
+      description: "Create and deploy Dataverse entities and relationships"
+      estimatedEffort: "2 sprints"
+      priority: 2
+      features:
+        - "Core Entity Design"
+        - "Relationship Configuration"
+        - "Security Model Implementation"
+    
+    - name: "Application Development"
+      description: "Build Power Platform applications and integrations"
+      estimatedEffort: "3 sprints"
+      priority: 3
+      features:
+        - "Core Application Development"
+        - "Integration Implementation"
+        - "Testing and Validation"
+
+  features:
+    - epic: "Environment Setup"
+      name: "Development Environment Configuration"
+      description: "Set up and configure the development environment"
+      userStories:
+        - "Create Dataverse environment"
+        - "Configure security roles"
+        - "Set up connections"
+        - "Deploy base solution framework"
+    
+    - epic: "Environment Setup"
+      name: "Test Environment Configuration"
+      description: "Set up and configure the test environment"
+      userStories:
+        - "Create test Dataverse environment"
+        - "Configure test security roles"
+        - "Set up test data"
+        - "Configure deployment pipeline"
+
+deploymentSettings:
+  parallel: true
+  dependencies:
+    - source: "Development Environment Configuration"
+      target: "Test Environment Configuration"
+      type: "prerequisite"
+    - source: "Test Environment Configuration"
+      target: "Production Environment Configuration"
+      type: "prerequisite"
+  
+  validation:
+    - stage: "environment"
+      checks:
+        - "Environment accessibility"
+        - "Service connections"
+        - "Security roles"
+    - stage: "datamodel"
+      checks:
+        - "Entity creation"
+        - "Relationship validation"
+        - "Security permissions"
