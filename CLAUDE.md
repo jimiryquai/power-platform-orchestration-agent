@@ -1,203 +1,290 @@
-# Power Platform Orchestration Agent - Claude Session Notes
+# Power Platform Orchestration Agent
 
 ## Project Overview
-An intelligent conversational orchestration agent that automates enterprise-level Power Platform project setup and management through Claude Desktop integration with specialized MCP servers, eliminating the need for complex workflow engines.
+An intelligent conversational orchestration agent that automates enterprise-level Power Platform project setup and management through Claude Desktop integration with specialized MCP servers.
 
-## Current Status: Architecture Pivot Complete ✅
-
-### Key Decisions Made
-
-#### 1. **Architecture Simplification (Major Decision)**
-**Decision**: Eliminate n8n dependency and move to MCP-only conversational architecture
-**Rationale**: 
-- n8n adds unnecessary complexity for conversational automation
-- Direct REST API integration is more reliable than CLI subprocess management
-- Claude Desktop provides superior natural language interface
-- MCP servers offer better modularity and maintainability
-
-**Old Architecture**: `User → API → n8n → PAC CLI/MCPs → Azure/PowerPlatform`
-**New Architecture**: `User → Claude Desktop → MCP Servers → REST APIs → Azure/PowerPlatform`
-
-#### 2. **Power Platform Integration Strategy**
-**Decision**: Use direct REST APIs instead of PAC CLI
-**Rationale**:
-- **Dataverse Web API** can create solutions: `POST /api/data/v9.2/solutions`
-- **Power Platform Admin API** can manage environments
-- **No CLI dependencies** = more portable and reliable
-- **Better error handling** through direct HTTP responses
-
-#### 3. **Azure DevOps Integration Status**
-**Current Status**: ✅ **WORKING** - Project creation fixed
-**Issue Resolved**: Payload validation error (400 Bad Request) 
-**Solution Applied**: Cleaned up debug logging, payload structure now correct
-**Test Result**: Projects create successfully, subsequent operations (iterations, work items) need refinement
-
-## Technical Implementation Status
-
-### ✅ Completed Components
-
-#### Azure DevOps Integration (`src/integrations/azure-devops/mcp-client.js`)
-- **Project Creation**: ✅ Working (fixed payload validation issue)
-- **Authentication**: ✅ Working (PAT token with Basic auth)
-- **API Integration**: ✅ Working (direct REST calls to Azure DevOps API)
-- **Error Handling**: ✅ Improved (removed excessive debug logging)
-
-#### Project Templates (`src/templates/s-project-template.yaml`)
-- **S-Project Template**: ✅ Complete
-  - 3 environments (Dev/Test/Prod)
-  - 12-week duration, 6 x 2-week sprints
-  - Epic/feature/user story breakdown
-  - Azure DevOps configuration settings
-
-#### Configuration Management (`src/config/index.js`)
-- **Environment Variables**: ✅ Configured
-- **Azure DevOps Settings**: ✅ Working
-- **Base URL Construction**: ✅ Functional
-
-### 🔄 In Progress
-
-#### Documentation Updates
-- **PRD Updated**: ✅ Reflects new MCP-only architecture
-- **Implementation Docs**: 🔄 Need updating for simplified architecture
-
-### ❌ Needs Refactoring/Implementation
-
-#### Current Orchestrator (`src/workflows/orchestrator.js`)
-- **Issue**: Still dependent on n8n integration
-- **Action Needed**: Refactor to be MCP-ready, remove n8n dependencies
-
-#### Power Platform Integration (`src/integrations/power-platform/pac-client.js`)
-- **Issue**: Currently uses PAC CLI subprocess calls
-- **Action Needed**: Replace with direct REST API integration
-- **Target APIs**: 
-  - Dataverse Web API for solutions/entities
-  - Power Platform Admin API for environments
-
-#### API Routes (`src/api/routes.js`)
-- **Issue**: Designed for original n8n-based architecture
-- **Action Needed**: Update for direct MCP server integration
-
-## Next Session Priorities
-
-### 🎯 Immediate Tasks (High Priority)
-
-1. **Design Power Platform MCP Server**
-   - Define REST API endpoints for environment management
-   - Plan Dataverse Web API integration for solution creation
-   - Design authentication strategy (Service Principal)
-
-2. **Design Microsoft Graph API MCP Server**
-   - **NEW**: Azure MCP doesn't handle app registrations directly
-   - Implement Microsoft Graph API integration for app registration creation
-   - Handle Service Principal creation and permission assignment
-   - Authentication via existing Service Principal
-
-3. **Refactor Orchestrator**
-   - Remove n8n dependencies from `src/workflows/orchestrator.js`
-   - Implement direct MCP server coordination
-   - Maintain existing Azure DevOps integration (it's working!)
-
-4. **Implement Power Platform REST API Client**
-   - Replace PAC CLI calls with direct API integration
-   - Environment creation via Power Platform Admin API
-   - Solution management via Dataverse Web API
-
-### 🔧 Technical Architecture Decisions Needed
-
-1. **MCP Server Structure**
-   - **Updated**: Need 3 MCP servers total:
-     - Power Platform MCP (environment/solution management)
-     - Microsoft Graph API MCP (app registrations)  
-     - Azure DevOps MCP (existing - project management)
-   - Authentication handling across MCP servers
-   - Error handling and retry logic standardization
-
-2. **Template Integration**
-   - How to integrate YAML templates with MCP servers
-   - Template validation and customization mechanisms
-   - Storage strategy (current filesystem vs Claude knowledge base)
-
-3. **State Management**
-   - Conversation state tracking without Redis
-   - Progress monitoring across multiple MCP operations
-   - Error recovery and rollback strategies
-
-## Key Technical Insights
-
-### Azure DevOps API Lessons Learned
-- **Payload Validation**: Azure DevOps API is strict about payload structure
-- **Error Messages**: Provide specific guidance (e.g., "project already exists" vs "invalid payload")
-- **Authentication**: PAT tokens work reliably with Basic auth
-- **API Versioning**: 7.0 works well for project creation
-
-### Power Platform API Capabilities
-- **Environment Creation**: Power Platform Admin API handles this
-- **Solution Management**: Dataverse Web API supports full CRUD operations
-- **No CLI Required**: All operations achievable via REST APIs
-- **Authentication**: Service Principal recommended for automation
-
-### Azure MCP Server Analysis (Updated)
-**Repository**: https://github.com/Azure/azure-mcp/tree/1ea702cb489ba95c5d9bea8d41fc18e9343703f8
-**Actual Capabilities**:
-- ❌ **No Direct App Registration Support** - Focuses on data services (Storage, Cosmos DB, AI Search, Monitor)
-- ✅ **Azure CLI Integration** - Can run `az ad app create` commands indirectly
-- ✅ **Resource Group Management** - Direct support
-- ❌ **No Microsoft Graph API Integration** - Would need custom implementation
-
-**Recommendation**: For clean automation, implement **direct Microsoft Graph API integration** rather than CLI subprocess calls for app registration creation.
-
-## File Structure Status
-
-```
-src/
-├── integrations/
-│   ├── azure-devops/
-│   │   └── mcp-client.js          ✅ Working (project creation fixed)
-│   ├── power-platform/
-│   │   └── pac-client.js          ❌ Needs refactoring (remove PAC CLI)
-│   └── n8n/
-│       └── workflow-manager.js    ❌ Can be removed (n8n eliminated)
-├── templates/
-│   └── s-project-template.yaml    ✅ Complete and functional
-├── workflows/
-│   └── orchestrator.js            🔄 Needs refactoring (remove n8n deps)
-├── api/
-│   └── routes.js                  🔄 Needs updating for MCP architecture
-└── config/
-    └── index.js                   ✅ Working
+## Common Commands
+```bash
+npm run dev          # Start development server
+npm run test         # Run tests
+npm run lint         # Check code style
+npm run typecheck    # Run TypeScript checks
+npm run build        # Build the project
 ```
 
-## Environment Setup Notes
+## Key Files and Their Purpose
+- `src/integrations/azure-devops/mcp-client.js` - Azure DevOps API integration (working)
+- `src/integrations/power-platform/mcp-client.js` - Power Platform Dataverse API integration (working)
+- `src/templates/s-project-template.yaml` - S-Project template definition
+- `src/workflows/orchestrator.js` - Main orchestration logic (needs n8n removal)
+- `src/config/index.js` - Environment configuration
+- `PROJECT_NOTES.md` - Architecture decisions and session history
+- `_project_progress/` - Session tracking and progress logs
+- `.claude/rules/` - Persona and domain-specific prompt instructions
+
+## Power Platform / Dataverse Patterns (CRITICAL KNOWLEDGE)
+
+### Lookup Field Navigation Properties
+**NEVER FORGET**: In Dataverse Web API, lookup fields use navigation properties based on the Lookup.SchemaName from relationship definition:
+- Lookup field logical name: `jr_parenttable`
+- Relationship Lookup.SchemaName: `jr_ParentTable` (set during relationship creation)
+- Navigation property: `jr_ParentTable@odata.bind`
+- **CRITICAL**: The navigation property name comes from the Lookup.SchemaName, NOT from transforming the logical name
+- Format: `"SchemaName@odata.bind": "/entitycollection(guid)"`
+- Working example: `"jr_ParentTable@odata.bind": "/jr_parenttables(12345678-1234-1234-1234-123456789012)"`
+
+### Session Efficiency Rules - AUTOMATED SOLUTION
+**NEVER manually derive navigation properties again!** Use the schema-aware client:
+
+1. **Use SchemaAwarePowerPlatformClient** - `src/integrations/power-platform/schema-aware-client.ts`
+2. **Work with Display Names** - "Parent Table", "Child Table" (human-readable)
+3. **Automatic navigation properties** - Generated from Display Names, not logical names
+4. **Self-documenting code** - Schema tracks all tables and relationships automatically
+5. **Type-safe lookups** - No more guessing @odata.bind property names
+
+```typescript
+// OLD WAY (error-prone):
+const child = { 
+  jr_name: 'Child', 
+  'jr_ParentTable@odata.bind': `/jr_parenttables(${parentId})` // Had to guess this!
+};
+
+// NEW WAY (automated):
+await client.createChildRecord('Child Table', 'Parent Table', 
+  { jr_name: 'Child' }, parentId, environmentUrl); // Lookup handled automatically!
+```
+
+### Relationship Creation
+- Use exact JSON structure for relationship metadata
+- SchemaName is REQUIRED for custom entities
+- ReferencingAttribute and ReferencedAttribute must match field logical names
+- Navigation properties are auto-generated based on SchemaName
+
+### Working Examples (TESTED & VERIFIED)
+
+#### Create Child Record with Parent Lookup:
+```javascript
+const childRecord = {
+  jr_name: 'Child Record Name',
+  'jr_ParentTable@odata.bind': `/jr_parenttables(${parentGuid})`
+};
+await client.createRecord('jr_childtables', childRecord, environmentUrl);
+```
+
+#### Add Table to Solution:
+```javascript
+const result = await client.addTableToSolution('jr_parenttable', 'JRTestSolution', environmentUrl);
+// Uses SolutionUniqueName parameter, NOT SolutionId
+```
+
+#### Create One-to-Many Relationship:
+```javascript
+const relationshipData = {
+  "@odata.type": "Microsoft.Dynamics.CRM.OneToManyRelationshipMetadata",
+  "SchemaName": "jr_parenttable_jr_childtable",
+  "ReferencedEntity": "jr_parenttable",
+  "ReferencingEntity": "jr_childtable",
+  "ReferencedAttribute": "jr_parenttableid",
+  "ReferencingAttribute": "jr_parenttable",
+  "Lookup": {
+    "AttributeType": "Lookup",
+    "SchemaName": "jr_ParentTable"
+  }
+};
+```
+
+## TypeScript Migration Guidelines
+
+### Current Status
+The project is currently in JavaScript and needs migration to TypeScript.
+
+### Migration Approach
+1. Set up TypeScript configuration with strict mode
+2. Convert files incrementally, starting with leaf modules
+3. Add proper type definitions for all interfaces
+4. Use strict null checks and no implicit any
+
+### Type Safety Rules - ZERO TOLERANCE FOR 'any'
+- **MANDATORY**: All functions MUST have explicit return types
+- **BANNED**: Using `any` type is STRICTLY FORBIDDEN (ESLint will fail the build)
+- **MANDATORY**: All function parameters MUST be explicitly typed
+- **MANDATORY**: All variables MUST have explicit types or proper type inference
+- **MANDATORY**: Use proper domain-specific interfaces for all API contracts
+- **MANDATORY**: Prefer union types over enums for string literals
+- **MANDATORY**: All async functions MUST be properly typed with Promise<T>
+- **BANNED**: Type assertions (as any) are forbidden - fix the types instead
+- **ENTERPRISE STANDARD**: Code must be self-documenting through strong types
+
+## Code Style Guidelines
+
+### General Principles
+- One export per file for clear module boundaries
+- Functions should have a single purpose (< 20 lines)
+- Use descriptive names - avoid abbreviations
+- Prefer composition over inheritance
+
+### Naming Conventions
+- **Classes**: PascalCase (e.g., `ProjectManager`)
+- **Variables/Functions**: camelCase (e.g., `createProject`)
+- **Constants**: UPPER_SNAKE_CASE (e.g., `MAX_RETRIES`)
+- **Interfaces**: Prefix with 'I' (e.g., `IProjectConfig`)
+- **Boolean variables**: Start with verbs (e.g., `isLoading`, `hasError`)
+
+### Error Handling
+- Use exceptions for unexpected errors
+- Always provide context when rethrowing errors
+- Use proper error types (not just Error)
+- Log errors with appropriate severity levels
+
+## Testing Guidelines
+
+### Test-Driven Development (TDD)
+1. Write failing test first
+2. Write minimal code to pass the test
+3. Refactor while keeping tests green
+
+### Test Organization
+- **Integration-first approach**: 60% integration, 30% component, 10% unit tests
+- Group tests by feature/module
+- Use descriptive test names that explain the scenario
+- Follow Arrange-Act-Assert pattern
+- Every test starts with proper authentication
+- Test with real API endpoints using test environments
+
+### Testing Tools
+- Jest for test runner
+- Mock external dependencies appropriately
+- Use factories for test data generation
+
+## Environment Setup
 
 ### Required Environment Variables
 ```bash
-AZURE_DEVOPS_ORG=jamesryandev
-AZURE_DEVOPS_PAT=[working-token]
-AZURE_CLIENT_ID=[needed-for-power-platform]
-AZURE_CLIENT_SECRET=[needed-for-power-platform]
-AZURE_TENANT_ID=[needed-for-power-platform]
+AZURE_DEVOPS_ORG=           # Your Azure DevOps organization
+AZURE_DEVOPS_PAT=           # Personal Access Token for Azure DevOps
+AZURE_CLIENT_ID=            # Service Principal for Power Platform
+AZURE_CLIENT_SECRET=        # Service Principal secret
+AZURE_TENANT_ID=            # Azure tenant ID
 ```
 
-### Working Integrations
-- Azure DevOps: ✅ Connection validated, project creation working
-- Power Platform: ❌ Authentication failing (needs Service Principal setup)
-- n8n: ✅ Working but will be removed
+### Test Environment
+**James Dev Environment URL**: `https://james-dev.crm11.dynamics.com/api/data/v9.2`
+- Use this URL for all Power Platform testing
+- Environment supports Dataverse operations
+- Interactive auth available with `AZURE_USE_INTERACTIVE_AUTH=true`
 
-## Success Metrics Achieved
-- **Azure DevOps Integration**: Fixed major blocker (400 payload validation error)
-- **Template Structure**: Comprehensive S-Project template ready
-- **Architecture Decision**: Clear path forward with simplified MCP approach
-- **Documentation**: PRD updated to reflect new direction
+### Development Setup
+1. Clone the repository
+2. Copy `.env.example` to `.env` and fill in values
+3. Run `npm install`
+4. Run `npm run dev` to start development
 
-## Conversation Context for Next Session
-- **Working Foundation**: Azure DevOps integration is solid, build upon it
-- **Clear Direction**: MCP-only architecture decided and documented
-- **Updated Requirement**: Need Microsoft Graph API MCP server (Azure MCP doesn't handle app registrations)
-- **3 MCP Servers Needed**: Power Platform MCP + Microsoft Graph API MCP + Azure DevOps MCP (existing)
-- **Specific Blockers**: Power Platform needs REST API implementation, app registration needs Graph API
-- **Ready for Implementation**: Template structure and Azure DevOps working
-- **Focus Areas**: Power Platform MCP server + Microsoft Graph API MCP server design
+## Architecture Overview
+
+### MCP Server Architecture
+The system uses three MCP servers:
+1. **Azure DevOps MCP** - Project and work item management
+2. **Power Platform MCP** - Environment and solution management (to be built)
+3. **Microsoft Graph API MCP** - App registration management (to be built)
+
+### Integration Pattern
+All integrations follow this pattern:
+1. MCP server receives request from Claude Desktop
+2. Server makes authenticated REST API calls
+3. Responses are formatted and returned to Claude
+4. Error handling includes retries and context
+
+## API Integration Guidelines
+
+### REST API Principles
+- Use async/await for all API calls
+- Implement exponential backoff for retries
+- Log all API requests and responses (sanitize sensitive data)
+- Handle rate limiting appropriately
+
+### Authentication
+- Azure DevOps: PAT token with Basic auth
+- Power Platform: OAuth2 with Service Principal
+- Microsoft Graph: OAuth2 with Service Principal
+
+## Project Structure
+```
+src/
+├── integrations/       # External service integrations
+├── templates/          # Project templates (YAML)
+├── workflows/          # Orchestration logic
+├── api/               # HTTP API endpoints
+├── config/            # Configuration management
+└── utils/             # Shared utilities
+```
+
+## Session Management
+
+### Progress Tracking
+- Use `_project_progress/` folder for session logs
+- Create timestamped session files
+- Track completed and pending tasks
+- Document blockers and resolutions
+
+### Session Handoff
+When ending a session:
+1. Update PROJECT_NOTES.md with current status
+2. Create session summary in _project_progress/
+3. List pending tasks and blockers
+4. Note any environment changes
+
+## Common Issues and Solutions
+
+### Azure DevOps API
+- **Issue**: 400 Bad Request on project creation
+- **Solution**: Ensure payload structure matches API spec exactly
+
+### Power Platform Authentication
+- **Issue**: Authentication failures
+- **Solution**: Verify Service Principal has correct permissions
+
+### TypeScript Migration
+- **Issue**: Type errors in existing code
+- **Solution**: Use `@ts-expect-error` temporarily, fix incrementally
+
+## Best Practices
+
+### Performance
+- Implement proper memoization where needed
+- Use pagination for large data sets
+- Cache API responses appropriately
+- Monitor bundle sizes
+
+### Security
+- Never commit secrets or API keys
+- Use environment variables for all configuration
+- Sanitize logs to remove sensitive data
+- Follow principle of least privilege
+
+### Code Quality
+- Run linter before committing
+- Ensure all tests pass
+- Keep functions focused and small
+- Document complex business logic
+
+## Persona and Prompt Instructions
+
+The `.claude/rules/` folder contains domain-specific prompt instructions:
+
+- **`developer-persona.mdc`** - Core developer identity, work standards, and behavioral guidelines
+- **`typescript-migration.mdc`** - Comprehensive TypeScript migration strategy and patterns
+- **`power-platform-domain.mdc`** - Power Platform architecture knowledge and integration patterns
+- **`testing-strategy.mdc`** - TDD approach with integration-first testing philosophy
+
+These files define how Claude should approach development tasks, maintain code quality standards, and apply domain expertise to Power Platform automation challenges.
+
+## Links and Resources
+- [Azure DevOps REST API](https://docs.microsoft.com/en-us/rest/api/azure/devops/)
+- [Power Platform Admin API](https://docs.microsoft.com/en-us/power-platform/admin/admin-rest-api)
+- [Microsoft Graph API](https://docs.microsoft.com/en-us/graph/api/overview)
+- [MCP Protocol Documentation](https://modelcontextprotocol.io/docs)
 
 ---
-*Last Updated: 2025-06-18*
-*Status: Architecture pivot complete, ready for MCP server implementation*
+*For architecture decisions and project history, see PROJECT_NOTES.md*
+*For session-specific progress, see _project_progress/ folder*
+*For persona and behavioral guidelines, see .claude/rules/ folder*

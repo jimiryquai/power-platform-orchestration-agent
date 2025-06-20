@@ -1,6 +1,6 @@
 const axios = require('axios');
-const config = require('../../config');
-const logger = require('../../utils/logger');
+const config = require('../../config/index.js.bak');
+const logger = require('../../utils/logger.js.bak');
 
 class PowerPlatformMCPClient {
   constructor() {
@@ -833,9 +833,9 @@ class PowerPlatformMCPClient {
     }
     
     const componentPayload = {
-      ComponentId: componentData.componentId, // GUID of the component
-      ComponentType: componentData.componentType, // Component type code (e.g., 1 for Entity, 29 for Web Resource)
-      SolutionId: solutionResult.data.solution.id,
+      ComponentId: componentData.componentId,
+      ComponentType: componentData.componentType,
+      SolutionUniqueName: solutionUniqueName,
       AddRequiredComponents: componentData.addRequiredComponents || false,
       DoNotIncludeSubcomponents: componentData.doNotIncludeSubcomponents || false
     };
@@ -1522,6 +1522,591 @@ class PowerPlatformMCPClient {
     }
 
     return result;
+  }
+
+  // =====================================
+  // GENERIC TABLE OPERATIONS
+  // =====================================
+
+  /**
+   * Create a custom table with specified fields
+   */
+  async createTable(tableConfig, environmentUrl) {
+    logger.info('Creating custom table:', tableConfig.logicalName);
+    
+    try {
+      // Create the table entity metadata
+      const entityMetadata = {
+        "@odata.type": "Microsoft.Dynamics.CRM.EntityMetadata",
+        SchemaName: tableConfig.schemaName || tableConfig.logicalName,
+        LogicalName: tableConfig.logicalName,
+        DisplayName: {
+          "@odata.type": "Microsoft.Dynamics.CRM.Label",
+          LocalizedLabels: [{
+            "@odata.type": "Microsoft.Dynamics.CRM.LocalizedLabel",
+            Label: tableConfig.displayName,
+            LanguageCode: 1033
+          }]
+        },
+        DisplayCollectionName: {
+          "@odata.type": "Microsoft.Dynamics.CRM.Label",
+          LocalizedLabels: [{
+            "@odata.type": "Microsoft.Dynamics.CRM.LocalizedLabel", 
+            Label: tableConfig.pluralDisplayName || `${tableConfig.displayName}s`,
+            LanguageCode: 1033
+          }]
+        },
+        Description: {
+          "@odata.type": "Microsoft.Dynamics.CRM.Label",
+          LocalizedLabels: [{
+            "@odata.type": "Microsoft.Dynamics.CRM.LocalizedLabel",
+            Label: tableConfig.description || '',
+            LanguageCode: 1033
+          }]
+        },
+        OwnershipType: "UserOwned", // UserOwned, OrganizationOwned, TeamOwned
+        TableType: "Standard",
+        HasActivities: false,
+        HasNotes: true,
+        IsActivity: false,
+        IsActivityParty: false,
+        IsAuditEnabled: { Value: true },
+        IsAvailableOffline: true,
+        IsDocumentManagementEnabled: false,
+        IsMailMergeEnabled: { Value: false },
+        IsValidForQueue: { Value: false },
+        IsConnectionsEnabled: { Value: false }
+      };
+
+      // Add primary name attribute to the table definition
+      const primaryNameField = {
+        "@odata.type": "Microsoft.Dynamics.CRM.StringAttributeMetadata",
+        AttributeType: "String",
+        AttributeTypeName: { Value: "StringType" },
+        SchemaName: tableConfig.primaryFieldName || "jr_name",
+        LogicalName: (tableConfig.primaryFieldName || "jr_name").toLowerCase(),
+        DisplayName: {
+          "@odata.type": "Microsoft.Dynamics.CRM.Label",
+          LocalizedLabels: [{
+            "@odata.type": "Microsoft.Dynamics.CRM.LocalizedLabel",
+            Label: "Name",
+            LanguageCode: 1033
+          }]
+        },
+        Description: {
+          "@odata.type": "Microsoft.Dynamics.CRM.Label",
+          LocalizedLabels: [{
+            "@odata.type": "Microsoft.Dynamics.CRM.LocalizedLabel",
+            Label: "The primary name field for the record",
+            LanguageCode: 1033
+          }]
+        },
+        RequiredLevel: { Value: "ApplicationRequired" },
+        MaxLength: 100,
+        FormatName: { Value: "Text" },
+        IsPrimaryName: true
+      };
+
+      // Add primary field and any custom fields to attributes array
+      const allAttributes = [primaryNameField];
+      if (tableConfig.fields && tableConfig.fields.length > 0) {
+        allAttributes.push(...tableConfig.fields.map(field => this.createFieldMetadata(field)));
+      }
+      entityMetadata.Attributes = allAttributes;
+
+      const result = await this.executeDataverseRequest(
+        'POST',
+        'EntityDefinitions',
+        entityMetadata,
+        environmentUrl
+      );
+
+      if (result.success) {
+        logger.info('Table created successfully:', {
+          logicalName: tableConfig.logicalName,
+          displayName: tableConfig.displayName
+        });
+        
+        return {
+          success: true,
+          table: {
+            logicalName: tableConfig.logicalName,
+            displayName: tableConfig.displayName,
+            metadataId: result.data.MetadataId
+          }
+        };
+      } else {
+        logger.error('Failed to create table:', result);
+        return result;
+      }
+      
+    } catch (error) {
+      logger.error('Failed to create table:', error);
+      return {
+        success: false,
+        error: error.message
+      };
+    }
+  }
+
+  /**
+   * Create field metadata based on field configuration
+   */
+  createFieldMetadata(fieldConfig) {
+    const baseMetadata = {
+      LogicalName: fieldConfig.logicalName,
+      DisplayName: {
+        "@odata.type": "Microsoft.Dynamics.CRM.Label",
+        LocalizedLabels: [{
+          "@odata.type": "Microsoft.Dynamics.CRM.LocalizedLabel",
+          Label: fieldConfig.displayName,
+          LanguageCode: 1033
+        }]
+      },
+      Description: {
+        "@odata.type": "Microsoft.Dynamics.CRM.Label", 
+        LocalizedLabels: [{
+          "@odata.type": "Microsoft.Dynamics.CRM.LocalizedLabel",
+          Label: fieldConfig.description || '',
+          LanguageCode: 1033
+        }]
+      },
+      RequiredLevel: {
+        Value: fieldConfig.required ? "ApplicationRequired" : "None"
+      },
+      IsAuditEnabled: { Value: true },
+      IsCustomizable: { Value: true },
+      IsRenameable: { Value: true },
+      IsValidForAdvancedFind: { Value: true },
+      IsValidForCreate: { Value: true },
+      IsValidForRead: { Value: true },
+      IsValidForUpdate: { Value: true }
+    };
+
+    // Set field type specific properties
+    switch (fieldConfig.type.toLowerCase()) {
+      case 'string':
+      case 'text':
+        return {
+          ...baseMetadata,
+          "@odata.type": "Microsoft.Dynamics.CRM.StringAttributeMetadata",
+          AttributeType: "String",
+          AttributeTypeName: { Value: "StringType" },
+          MaxLength: fieldConfig.maxLength || 100,
+          FormatName: { Value: "Text" }
+        };
+
+      case 'memo':
+      case 'multiline':
+        return {
+          ...baseMetadata,
+          "@odata.type": "Microsoft.Dynamics.CRM.MemoAttributeMetadata",
+          AttributeType: "Memo",
+          AttributeTypeName: { Value: "MemoType" },
+          MaxLength: fieldConfig.maxLength || 2000,
+          Format: "TextArea"
+        };
+
+      case 'integer':
+      case 'number':
+        return {
+          ...baseMetadata,
+          "@odata.type": "Microsoft.Dynamics.CRM.IntegerAttributeMetadata",
+          AttributeType: "Integer",
+          AttributeTypeName: { Value: "IntegerType" },
+          MinValue: fieldConfig.minValue || -2147483648,
+          MaxValue: fieldConfig.maxValue || 2147483647,
+          Format: "None"
+        };
+
+      case 'decimal':
+        return {
+          ...baseMetadata,
+          "@odata.type": "Microsoft.Dynamics.CRM.DecimalAttributeMetadata",
+          AttributeType: "Decimal",
+          AttributeTypeName: { Value: "DecimalType" },
+          MinValue: fieldConfig.minValue || -100000000000,
+          MaxValue: fieldConfig.maxValue || 100000000000,
+          Precision: fieldConfig.precision || 2,
+          ImeMode: "Disabled"
+        };
+
+      case 'money':
+      case 'currency':
+        return {
+          ...baseMetadata,
+          "@odata.type": "Microsoft.Dynamics.CRM.MoneyAttributeMetadata",
+          AttributeType: "Money",
+          AttributeTypeName: { Value: "MoneyType" },
+          MinValue: fieldConfig.minValue || -922337203685477,
+          MaxValue: fieldConfig.maxValue || 922337203685477,
+          Precision: fieldConfig.precision || 4,
+          PrecisionSource: 2,
+          ImeMode: "Disabled"
+        };
+
+      case 'datetime':
+      case 'date':
+        return {
+          ...baseMetadata,
+          "@odata.type": "Microsoft.Dynamics.CRM.DateTimeAttributeMetadata",
+          AttributeType: "DateTime",
+          AttributeTypeName: { Value: "DateTimeType" },
+          Format: fieldConfig.format || "DateAndTime",
+          ImeMode: "Disabled"
+        };
+
+      case 'boolean':
+      case 'yesno':
+        return {
+          ...baseMetadata,
+          "@odata.type": "Microsoft.Dynamics.CRM.BooleanAttributeMetadata",
+          AttributeType: "Boolean",
+          AttributeTypeName: { Value: "BooleanType" },
+          OptionSet: {
+            "@odata.type": "Microsoft.Dynamics.CRM.BooleanOptionSetMetadata",
+            TrueOption: {
+              Value: 1,
+              Label: {
+                "@odata.type": "Microsoft.Dynamics.CRM.Label",
+                LocalizedLabels: [{
+                  "@odata.type": "Microsoft.Dynamics.CRM.LocalizedLabel",
+                  Label: fieldConfig.trueLabel || "Yes",
+                  LanguageCode: 1033
+                }]
+              }
+            },
+            FalseOption: {
+              Value: 0,
+              Label: {
+                "@odata.type": "Microsoft.Dynamics.CRM.Label",
+                LocalizedLabels: [{
+                  "@odata.type": "Microsoft.Dynamics.CRM.LocalizedLabel",
+                  Label: fieldConfig.falseLabel || "No",
+                  LanguageCode: 1033
+                }]
+              }
+            }
+          }
+        };
+
+      case 'lookup':
+        if (!fieldConfig.targetTable) {
+          throw new Error('Lookup fields require targetTable to be specified');
+        }
+        return {
+          ...baseMetadata,
+          "@odata.type": "Microsoft.Dynamics.CRM.LookupAttributeMetadata",
+          AttributeType: "Lookup",
+          AttributeTypeName: { Value: "LookupType" },
+          Targets: [fieldConfig.targetTable]
+        };
+
+      case 'picklist':
+      case 'optionset':
+        if (!fieldConfig.options || fieldConfig.options.length === 0) {
+          throw new Error('Picklist fields require options to be specified');
+        }
+        return {
+          ...baseMetadata,
+          "@odata.type": "Microsoft.Dynamics.CRM.PicklistAttributeMetadata",
+          AttributeType: "Picklist",
+          AttributeTypeName: { Value: "PicklistType" },
+          OptionSet: {
+            "@odata.type": "Microsoft.Dynamics.CRM.OptionSetMetadata",
+            IsGlobal: false,
+            Options: fieldConfig.options.map((option, index) => ({
+              Value: option.value || (index + 1),
+              Label: {
+                "@odata.type": "Microsoft.Dynamics.CRM.Label",
+                LocalizedLabels: [{
+                  "@odata.type": "Microsoft.Dynamics.CRM.LocalizedLabel",
+                  Label: option.label,
+                  LanguageCode: 1033
+                }]
+              }
+            }))
+          }
+        };
+
+      default:
+        throw new Error(`Unsupported field type: ${fieldConfig.type}`);
+    }
+  }
+
+  /**
+   * Add a field to an existing table
+   */
+  async addFieldToTable(tableLogicalName, fieldConfig, environmentUrl) {
+    logger.info(`Adding field to table ${tableLogicalName}:`, fieldConfig.logicalName);
+    
+    try {
+      const fieldMetadata = this.createFieldMetadata(fieldConfig);
+      
+      const result = await this.executeDataverseRequest(
+        'POST',
+        `EntityDefinitions(LogicalName='${tableLogicalName}')/Attributes`,
+        fieldMetadata,
+        environmentUrl
+      );
+
+      if (result.success) {
+        logger.info('Field added successfully:', {
+          table: tableLogicalName,
+          field: fieldConfig.logicalName
+        });
+      }
+
+      return result;
+      
+    } catch (error) {
+      logger.error('Failed to add field to table:', error);
+      return {
+        success: false,
+        error: error.message
+      };
+    }
+  }
+
+  // =====================================
+  // RELATIONSHIP OPERATIONS
+  // =====================================
+
+  /**
+   * Create a one-to-many relationship between tables
+   */
+  async createOneToManyRelationship(relationshipConfig, environmentUrl) {
+    logger.info('Creating one-to-many relationship:', relationshipConfig.schemaName);
+    
+    try {
+      const relationshipMetadata = {
+        "@odata.type": "Microsoft.Dynamics.CRM.OneToManyRelationshipMetadata",
+        SchemaName: relationshipConfig.schemaName,
+        ReferencedEntity: relationshipConfig.referencedEntity,
+        ReferencingEntity: relationshipConfig.referencingEntity,
+        ReferencedAttribute: relationshipConfig.referencedAttribute || `${relationshipConfig.referencedEntity}id`,
+        AssociatedMenuConfiguration: {
+          Behavior: "UseCollectionName",
+          Group: "Details",
+          Label: {
+            "@odata.type": "Microsoft.Dynamics.CRM.Label",
+            LocalizedLabels: [{
+              "@odata.type": "Microsoft.Dynamics.CRM.LocalizedLabel",
+              Label: relationshipConfig.menuLabel || relationshipConfig.referencingEntity,
+              LanguageCode: 1033
+            }]
+          },
+          Order: 10000
+        },
+        CascadeConfiguration: {
+          Assign: "NoCascade",
+          Delete: "RemoveLink",
+          Merge: "NoCascade", 
+          Reparent: "NoCascade",
+          Share: "NoCascade",
+          Unshare: "NoCascade"
+        },
+        Lookup: {
+          "@odata.type": "Microsoft.Dynamics.CRM.LookupAttributeMetadata",
+          AttributeType: "Lookup",
+          AttributeTypeName: { Value: "LookupType" },
+          SchemaName: relationshipConfig.lookupField?.schemaName || `${relationshipConfig.referencedEntity}_lookup`,
+          DisplayName: {
+            "@odata.type": "Microsoft.Dynamics.CRM.Label",
+            LocalizedLabels: [{
+              "@odata.type": "Microsoft.Dynamics.CRM.LocalizedLabel",
+              Label: relationshipConfig.lookupField?.displayName || relationshipConfig.referencedEntity,
+              LanguageCode: 1033
+            }]
+          },
+          RequiredLevel: { Value: relationshipConfig.lookupField?.required ? "ApplicationRequired" : "None" }
+        }
+      };
+
+      const result = await this.executeDataverseRequest(
+        'POST',
+        'RelationshipDefinitions',
+        relationshipMetadata,
+        environmentUrl
+      );
+
+      return result;
+      
+    } catch (error) {
+      logger.error('Failed to create relationship:', error);
+      return {
+        success: false,
+        error: error.message
+      };
+    }
+  }
+
+  /**
+   * Add a table to a solution
+   * @param {string} tableName - Logical name of table
+   * @param {string} solutionName - Unique name of solution
+   * @param {string} environmentUrl - Dataverse environment URL
+   */
+  async addTableToSolution(tableName, solutionName, environmentUrl) {
+    logger.info(`Adding table ${tableName} to solution ${solutionName}`);
+    
+    try {
+      // Get table metadata ID
+      const tableMetadata = await this.executeDataverseRequest(
+        'GET',
+        `EntityDefinitions?$filter=LogicalName eq '${tableName}'&$select=MetadataId`,
+        null,
+        environmentUrl
+      );
+
+      if (!tableMetadata.success || !tableMetadata.data.value || tableMetadata.data.value.length === 0) {
+        return {
+          success: false,
+          error: `Table ${tableName} not found`
+        };
+      }
+
+      const metadataId = tableMetadata.data.value[0].MetadataId;
+
+      const result = await this.addComponentToSolution(
+        solutionName,
+        {
+          componentId: metadataId,
+          componentType: 1, // Entity
+          addRequiredComponents: true
+        },
+        environmentUrl
+      );
+
+      return result;
+      
+    } catch (error) {
+      logger.error('Failed to add table to solution:', error);
+      return {
+        success: false,
+        error: error.message
+      };
+    }
+  }
+
+  /**
+   * Create a many-to-many relationship between tables
+   */
+  async createManyToManyRelationship(relationshipConfig, environmentUrl) {
+    logger.info('Creating many-to-many relationship:', relationshipConfig.schemaName);
+    
+    try {
+      const relationshipMetadata = {
+        "@odata.type": "Microsoft.Dynamics.CRM.ManyToManyRelationshipMetadata",
+        SchemaName: relationshipConfig.schemaName,
+        Entity1LogicalName: relationshipConfig.entity1LogicalName,
+        Entity2LogicalName: relationshipConfig.entity2LogicalName,
+        IntersectEntityName: relationshipConfig.intersectEntityName || `${relationshipConfig.entity1LogicalName}_${relationshipConfig.entity2LogicalName}`,
+        Entity1AssociatedMenuConfiguration: {
+          Behavior: relationshipConfig.entity1MenuBehavior || "UseLabel",
+          Group: "Details", 
+          Label: {
+            "@odata.type": "Microsoft.Dynamics.CRM.Label",
+            LocalizedLabels: [{
+              "@odata.type": "Microsoft.Dynamics.CRM.LocalizedLabel",
+              Label: relationshipConfig.entity1MenuLabel || relationshipConfig.entity2LogicalName,
+              LanguageCode: 1033
+            }]
+          },
+          Order: relationshipConfig.entity1MenuOrder || 10000
+        },
+        Entity2AssociatedMenuConfiguration: {
+          Behavior: relationshipConfig.entity2MenuBehavior || "UseLabel",
+          Group: "Details",
+          Label: {
+            "@odata.type": "Microsoft.Dynamics.CRM.Label", 
+            LocalizedLabels: [{
+              "@odata.type": "Microsoft.Dynamics.CRM.LocalizedLabel",
+              Label: relationshipConfig.entity2MenuLabel || relationshipConfig.entity1LogicalName,
+              LanguageCode: 1033
+            }]
+          },
+          Order: relationshipConfig.entity2MenuOrder || 10000
+        }
+      };
+
+      // Add navigation property names if specified
+      if (relationshipConfig.entity1NavigationPropertyName) {
+        relationshipMetadata.Entity1NavigationPropertyName = relationshipConfig.entity1NavigationPropertyName;
+      }
+      
+      if (relationshipConfig.entity2NavigationPropertyName) {
+        relationshipMetadata.Entity2NavigationPropertyName = relationshipConfig.entity2NavigationPropertyName;
+      }
+
+      const result = await this.executeDataverseRequest(
+        'POST',
+        'RelationshipDefinitions',
+        relationshipMetadata,
+        environmentUrl
+      );
+
+      if (result.success) {
+        logger.info('Many-to-many relationship created successfully:', {
+          schemaName: relationshipConfig.schemaName,
+          entity1: relationshipConfig.entity1LogicalName,
+          entity2: relationshipConfig.entity2LogicalName
+        });
+      }
+
+      return result;
+      
+    } catch (error) {
+      logger.error('Failed to create many-to-many relationship:', error);
+      return {
+        success: false,
+        error: error.message
+      };
+    }
+  }
+
+  /**
+   * List relationships for a table
+   */
+  async listTableRelationships(tableLogicalName, environmentUrl) {
+    logger.info('Listing relationships for table:', tableLogicalName);
+    
+    try {
+      const result = await this.executeDataverseRequest(
+        'GET',
+        `EntityDefinitions(LogicalName='${tableLogicalName}')?$expand=OneToManyRelationships,ManyToOneRelationships,ManyToManyRelationships`,
+        null,
+        environmentUrl
+      );
+
+      if (result.success) {
+        const relationships = {
+          oneToMany: result.data.OneToManyRelationships || [],
+          manyToOne: result.data.ManyToOneRelationships || [],
+          manyToMany: result.data.ManyToManyRelationships || []
+        };
+
+        logger.info(`Found relationships for ${tableLogicalName}:`, {
+          oneToMany: relationships.oneToMany.length,
+          manyToOne: relationships.manyToOne.length,
+          manyToMany: relationships.manyToMany.length
+        });
+
+        return {
+          success: true,
+          relationships: relationships
+        };
+      }
+
+      return result;
+      
+    } catch (error) {
+      logger.error('Failed to list table relationships:', error);
+      return {
+        success: false,
+        error: error.message
+      };
+    }
   }
 
   async disconnect() {

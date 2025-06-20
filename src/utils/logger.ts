@@ -1,6 +1,9 @@
-const winston = require('winston');
-const config = require('../config');
+import * as winston from 'winston';
+import config from '../config';
 
+/**
+ * Logger instance configured for the Power Platform Orchestration Agent
+ */
 const logger = winston.createLogger({
   level: config.app.logLevel,
   format: winston.format.combine(
@@ -23,6 +26,7 @@ const logger = winston.createLogger({
   ]
 });
 
+// Add console transport for non-production environments
 if (config.app.environment !== 'production') {
   logger.add(new winston.transports.Console({
     format: winston.format.combine(
@@ -32,4 +36,4 @@ if (config.app.environment !== 'production') {
   }));
 }
 
-module.exports = logger;
+export default logger;
