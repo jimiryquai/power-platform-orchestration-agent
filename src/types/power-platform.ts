@@ -58,7 +58,7 @@ export interface DataverseRecordReference {
 }
 
 export interface DataverseRecordWithLookup {
-  [key: string]: any;
+  [key: string]: string | number | boolean | null;
   // Lookup fields use navigation property syntax:
   // "jr_ParentTable@odata.bind": "/jr_parenttables(guid)"
   [navigationProperty: `${string}@odata.bind`]: string;
@@ -72,18 +72,18 @@ export interface DataverseSolutionComponent {
   DoNotIncludeSubcomponents?: boolean;
 }
 
-export interface DataverseApiResponse<T = any> {
+export interface DataverseApiResponse<T = unknown> {
   success: boolean;
   data?: T;
   error?: string;
   status?: number;
 }
 
-export interface DataverseBulkOperationResult<T = any> {
+export interface DataverseBulkOperationResult<T = unknown> {
   success: boolean;
   results: Array<{
     index: number;
-    data: any;
+    data: unknown;
     result: DataverseApiResponse<T>;
   }>;
   summary: {
@@ -94,7 +94,7 @@ export interface DataverseBulkOperationResult<T = any> {
 }
 
 // Helper type for creating records with lookup relationships
-export type DataverseRecordCreate<T extends Record<string, any>> = T & {
+export type DataverseRecordCreate<T extends Record<string, unknown>> = T & {
   [K in keyof T as K extends string 
     ? T[K] extends string 
       ? K extends `${string}@odata.bind` 
@@ -128,13 +128,17 @@ export const getNavigationPropertyName = (lookupFieldLogicalName: string): strin
   const parts = lookupFieldLogicalName.split('_');
   if (parts.length < 2) {
     // No underscore, just capitalize first letter
-    return parts[0]!.charAt(0).toUpperCase() + parts[0]!.slice(1);
+    const firstPart = parts[0];
+    if (firstPart === undefined || firstPart === '') return '';
+    return firstPart.charAt(0).toUpperCase() + firstPart.slice(1);
   }
   
   // Keep prefix lowercase, capitalize and concatenate the rest: "jr_parenttable" -> "jr_ParentTable"
-  return parts[0]! + '_' + parts.slice(1)
+  const prefix = parts[0];
+  if (prefix === undefined || prefix === '') return '';
+  return `${prefix}_${parts.slice(1)
     .map(part => part.charAt(0).toUpperCase() + part.slice(1))
-    .join('');
+    .join('')}`;
 };
 
 // Utility to create navigation property for record creation
@@ -144,7 +148,7 @@ export const createNavigationProperty = (lookupFieldLogicalName: string): string
 };
 
 // Helper to create a record with lookup reference
-export const createRecordWithLookup = <T extends Record<string, any>>(
+export const createRecordWithLookup = <T extends Record<string, unknown>>(
   baseRecord: T,
   lookupFieldName: string,
   targetEntitySet: string,

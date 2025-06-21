@@ -1,0 +1,226 @@
+[
+  {
+    "id": 1000,
+    "type": "Epic",
+    "title": "Project Foundation Setup",
+    "description": "Establish project infrastructure and authentication",
+    "phase": "Project Setup & Authentication",
+    "assignedTo": "unassigned",
+    "state": "New",
+    "priority": "High",
+    "effort": 8,
+    "tags": [
+      "project-setup-&-authentication",
+      "epic"
+    ],
+    "parentId": null
+  },
+  {
+    "id": 1001,
+    "type": "Feature",
+    "title": "Azure DevOps Project Setup",
+    "description": "Create and configure Azure DevOps project with repositories",
+    "phase": "Project Setup & Authentication",
+    "assignedTo": "unassigned",
+    "state": "New",
+    "priority": "Medium",
+    "effort": 5,
+    "tags": [
+      "project-setup-&-authentication",
+      "feature"
+    ],
+    "parentId": 1000
+  },
+  {
+    "id": 1002,
+    "type": "User Story",
+    "title": "Create Development Environment",
+    "description": "As a developer, I need a Power Platform development environment",
+    "phase": "Project Setup & Authentication",
+    "assignedTo": "unassigned",
+    "state": "New",
+    "priority": "Medium",
+    "effort": 3,
+    "tags": [
+      "project-setup-&-authentication",
+      "user story"
+    ],
+    "parentId": null
+  },
+  {
+    "id": 1003,
+    "type": "Epic",
+    "title": "Customer Support Core Features",
+    "description": "Build core customer support functionality",
+    "phase": "Core Solution Development",
+    "assignedTo": "unassigned",
+    "state": "New",
+    "priority": "High",
+    "effort": 8,
+    "tags": [
+      "core-solution-development",
+      "epic"
+    ],
+    "parentId": null
+  },
+  {
+    "id": 1004,
+    "type": "Feature",
+    "title": "Customer Data Model",
+    "description": "Design and implement customer and ticket entities",
+    "phase": "Core Solution Development",
+    "assignedTo": "unassigned",
+    "state": "New",
+    "priority": "Medium",
+    "effort": 5,
+    "tags": [
+      "core-solution-development",
+      "feature"
+    ],
+    "parentId": 1003
+  },
+  {
+    "id": 1005,
+    "type": "User Story",
+    "title": "Customer Registration",
+    "description": "As a customer, I need to register and create an account",
+    "phase": "Core Solution Development",
+    "assignedTo": "unassigned",
+    "state": "New",
+    "priority": "Medium",
+    "effort": 3,
+    "tags": [
+      "core-solution-development",
+      "user story"
+    ],
+    "parentId": null
+  },
+  {
+    "id": 1006,
+    "type": "User Story",
+    "title": "Submit Support Ticket",
+    "description": "As a customer, I need to submit support tickets",
+    "phase": "Core Solution Development",
+    "assignedTo": "unassigned",
+    "state": "New",
+    "priority": "Medium",
+    "effort": 3,
+    "tags": [
+      "core-solution-development",
+      "user story"
+    ],
+    "parentId": null
+  },
+  {
+    "id": 1007,
+    "type": "Task",
+    "title": "Create Customer Entity",
+    "description": "Implement Customer entity with required fields",
+    "phase": "Core Solution Development",
+    "assignedTo": "unassigned",
+    "state": "New",
+    "priority": "Medium",
+    "effort": 1,
+    "tags": [
+      "core-solution-development",
+      "task"
+    ],
+    "parentId": null
+  },
+  {
+    "id": 1008,
+    "type": "Epic",
+    "title": "Knowledge Base System",
+    "description": "Implement knowledge base and FAQ functionality",
+    "phase": "Knowledge Base Implementation",
+    "assignedTo": "unassigned",
+    "state": "New",
+    "priority": "High",
+    "effort": 8,
+    "tags": [
+      "knowledge-base-implementation",
+      "epic"
+    ],
+    "parentId": null
+  },
+  {
+    "id": 1009,
+    "type": "Feature",
+    "title": "FAQ Management",
+    "description": "System for managing and publishing FAQ content",
+    "phase": "Knowledge Base Implementation",
+    "assignedTo": "unassigned",
+    "state": "New",
+    "priority": "Medium",
+    "effort": 5,
+    "tags": [
+      "knowledge-base-implementation",
+      "feature"
+    ],
+    "parentId": 1008
+  },
+  {
+    "id": 1010,
+    "type": "User Story",
+    "title": "Search Knowledge Base",
+    "description": "As a customer, I need to search the knowledge base for answers",
+    "phase": "Knowledge Base Implementation",
+    "assignedTo": "unassigned",
+    "state": "New",
+    "priority": "Medium",
+    "effort": 3,
+    "tags": [
+      "knowledge-base-implementation",
+      "user story"
+    ],
+    "parentId": null
+  },
+  {
+    "id": 1011,
+    "type": "Epic",
+    "title": "Testing & Deployment",
+    "description": "Comprehensive testing and production deployment",
+    "phase": "Testing & Deployment",
+    "assignedTo": "unassigned",
+    "state": "New",
+    "priority": "High",
+    "effort": 8,
+    "tags": [
+      "testing-&-deployment",
+      "epic"
+    ],
+    "parentId": null
+  },
+  {
+    "id": 1012,
+    "type": "Feature",
+    "title": "End-to-End Testing",
+    "description": "Complete system testing across all environments",
+    "phase": "Testing & Deployment",
+    "assignedTo": "unassigned",
+    "state": "New",
+    "priority": "Medium",
+    "effort": 5,
+    "tags": [
+      "testing-&-deployment",
+      "feature"
+    ],
+    "parentId": 1011
+  },
+  {
+    "id": 1013,
+    "type": "Task",
+    "title": "Deploy to Production",
+    "description": "Deploy solution to production environment",
+    "phase": "Testing & Deployment",
+    "assignedTo": "unassigned",
+    "state": "New",
+    "priority": "Medium",
+    "effort": 1,
+    "tags": [
+      "testing-&-deployment",
+      "task"
+    ],
+    "parentId": null
+  }
+]

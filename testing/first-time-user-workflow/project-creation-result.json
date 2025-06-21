@@ -1,0 +1,42 @@
+{
+  "success": true,
+  "operation": {
+    "operationId": "proj_1750497478511_prd",
+    "status": "running",
+    "startedAt": "2025-06-21T09:17:58.511Z",
+    "progress": {
+      "totalSteps": 8,
+      "completedSteps": 3,
+      "currentStep": "Creating Azure DevOps work items from PRD"
+    },
+    "logs": [
+      {
+        "timestamp": "2025-06-21T09:17:58.511Z",
+        "level": "info",
+        "message": "Starting project creation from PRD"
+      },
+      {
+        "timestamp": "2025-06-21T09:17:58.511Z",
+        "level": "info",
+        "message": "Azure DevOps project created: CustomerSupportPortal"
+      },
+      {
+        "timestamp": "2025-06-21T09:17:58.511Z",
+        "level": "info",
+        "message": "Power Platform environments provisioning..."
+      },
+      {
+        "timestamp": "2025-06-21T09:17:58.511Z",
+        "level": "info",
+        "message": "Generating work items from PRD timeline..."
+      }
+    ]
+  },
+  "azureDevOps": {
+    "projectId": "proj-12345",
+    "projectUrl": "https://dev.azure.com/jamesryandev/CustomerSupportPortal",
+    "repositoriesCreated": 3,
+    "workItemsToCreate": 14
+  },
+  "message": "Project creation in progress - work items being generated from PRD"
+}

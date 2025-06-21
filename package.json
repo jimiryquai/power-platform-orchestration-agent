@@ -1,14 +1,20 @@
 {
   "name": "power-platform-orchestration-agent",
   "version": "1.0.0",
-  "description": "Intelligent orchestration agent using n8n that automates enterprise-level Power Platform project setup and management",
+  "description": "Intelligent conversational orchestration agent that automates enterprise-level Power Platform project setup and management through MCP servers",
   "main": "dist/index.js",
+  "bin": {
+    "power-platform-orchestrator": "dist/mcp/index.js"
+  },
   "scripts": {
     "build": "tsc",
     "build:watch": "tsc --watch",
     "start": "node dist/index.js",
     "start:ts": "ts-node src/index.ts",
+    "start:mcp": "node dist/mcp/index.js",
+    "start:mcp:dev": "ts-node src/mcp/index.ts",
     "dev": "ts-node-dev --respawn --transpile-only src/index.ts",
+    "mcp:dev": "ts-node-dev --respawn --transpile-only src/mcp/index.ts",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
@@ -17,14 +23,14 @@
     "lint:fix": "eslint src/ --ext .ts,.js --fix",
     "clean": "rm -rf dist",
     "prebuild": "npm run clean",
-    "setup:n8n": "docker-compose -f docker/docker-compose.yml up -d",
-    "setup:dev": "npm run setup:n8n && npm run setup:templates",
-    "setup:templates": "node scripts/setup-templates.js"
+    "setup:dev": "npm run setup:templates",
+    "setup:templates": "node scripts/setup-templates.js",
+    "validate:mcp": "node scripts/validate-mcp-setup.js",
+    "postbuild": "npm run validate:mcp"
   },
   "keywords": [
     "power-platform",
     "azure-devops",
-    "n8n",
     "orchestration",
     "automation",
     "mcp"
@@ -32,11 +38,11 @@
   "author": "Enterprise Orchestration Team",
   "license": "MIT",
   "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.13.0",
     "axios": "^1.6.0",
     "dotenv": "^16.3.1",
     "express": "^4.18.2",
     "js-yaml": "^4.1.0",
-    "redis": "^4.6.0",
     "uuid": "^9.0.0",
     "winston": "^3.11.0"
   },

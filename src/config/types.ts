@@ -38,19 +38,6 @@ export interface IPowerPlatformConfig {
   auth: IPowerPlatformAuthConfig;
 }
 
-export interface IN8nConfig {
-  host: string;
-  port: number;
-  protocol: string;
-  apiKey?: string;
-  readonly baseUrl: string;
-}
-
-export interface IRedisConfig {
-  host: string;
-  port: number;
-  password?: string;
-}
 
 export interface IMcpServerConfig {
   enabled: boolean;
@@ -60,8 +47,7 @@ export interface IMcpServerConfig {
 export interface IMcpConfig {
   azureDevOps: IMcpServerConfig;
   microsoftGraph: IMcpServerConfig;
-  n8n: IMcpServerConfig;
-  docker: IMcpServerConfig;
+  powerPlatform: IMcpServerConfig;
 }
 
 export interface ITemplatesConfig {
@@ -73,8 +59,6 @@ export interface IConfig {
   app: IAppConfig;
   azure: IAzureConfig;
   powerPlatform: IPowerPlatformConfig;
-  n8n: IN8nConfig;
-  redis: IRedisConfig;
   mcp: IMcpConfig;
   templates: ITemplatesConfig;
 }

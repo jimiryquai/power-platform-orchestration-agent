@@ -1,14 +1,28 @@
 // Self-documenting Dataverse schema management
 // Automatically tracks Display Names and generates correct navigation properties
 
-interface TableDefinition {
+import { 
+  AssociatedMenuBehavior,
+  AssociatedMenuGroup,
+  AttributeTypeCode,
+  CascadeType,
+  EntityRecord, 
+  LookupAttributeMetadata,
+  OneToManyRelationshipMetadata,
+  OwnershipType,
+  RelationshipType,
+  RequiredLevel,
+  TableMetadata
+} from './power-platform-interfaces';
+
+export interface TableDefinition {
   logicalName: string;
   displayName: string;
   schemaName: string; // Auto-generated from displayName
   publisherPrefix: string;
 }
 
-interface RelationshipDefinition {
+export interface RelationshipDefinition {
   schemaName: string;
   parentTable: TableDefinition;
   childTable: TableDefinition;
@@ -19,7 +33,7 @@ interface RelationshipDefinition {
   };
 }
 
-class DataverseSchemaManager {
+export class DataverseSchemaManager {
   private tables = new Map<string, TableDefinition>();
   private relationships = new Map<string, RelationshipDefinition>();
   
@@ -28,18 +42,18 @@ class DataverseSchemaManager {
   // Auto-generate SchemaName from Display Name
   private generateSchemaName(displayName: string): string {
     // "Parent Table" -> "jr_ParentTable"
-    return this.publisherPrefix + '_' + displayName
+    return `${this.publisherPrefix}_${displayName
       .split(' ')
       .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-      .join('');
+      .join('')}`;
   }
 
   // Auto-generate logical name from Display Name  
   private generateLogicalName(displayName: string): string {
     // "Parent Table" -> "jr_parenttable"
-    return this.publisherPrefix + '_' + displayName
+    return `${this.publisherPrefix}_${displayName
       .toLowerCase()
-      .replace(/\s+/g, '');
+      .replace(/\s+/g, '')}`;
   }
 
   // Register a table and auto-generate names
@@ -72,7 +86,7 @@ class DataverseSchemaManager {
     }
 
     // Default lookup display name to parent table display name
-    const lookupName = lookupDisplayName || parentTable.displayName;
+    const lookupName = lookupDisplayName ?? parentTable.displayName;
     
     const relationship: RelationshipDefinition = {
       schemaName: `${parentTable.logicalName}_${childTable.logicalName}`,
@@ -102,7 +116,7 @@ class DataverseSchemaManager {
   }
 
   // Create a record with lookup reference - type safe and auto-generated
-  createRecordWithLookup<T extends Record<string, any>>(
+  createRecordWithLookup<T extends EntityRecord>(
     baseRecord: T,
     childTableLogicalName: string,
     parentTableLogicalName: string,
@@ -122,7 +136,7 @@ class DataverseSchemaManager {
   }
 
   // Generate the complete relationship metadata for Dataverse API
-  generateRelationshipMetadata(relationshipSchemaName: string) {
+  generateRelationshipMetadata(relationshipSchemaName: string): OneToManyRelationshipMetadata {
     const relationship = this.relationships.get(relationshipSchemaName);
     if (!relationship) {
       throw new Error(`Relationship not found: ${relationshipSchemaName}`);
@@ -135,50 +149,73 @@ class DataverseSchemaManager {
       ReferencingEntity: relationship.childTable.logicalName,
       ReferencedAttribute: `${relationship.parentTable.logicalName}id`,
       ReferencingAttribute: relationship.lookupField.logicalName,
+      IsCustomRelationship: true,
+      IsManaged: false,
+      IsValidForAdvancedFind: true,
+      RelationshipType: RelationshipType.OneToManyRelationship,
+      CascadeConfiguration: {
+        Assign: CascadeType.NoCascade,
+        Share: CascadeType.NoCascade,
+        Unshare: CascadeType.NoCascade,
+        Reparent: CascadeType.NoCascade,
+        Delete: CascadeType.RemoveLink,
+        Merge: CascadeType.NoCascade
+      },
+      AssociatedMenuConfiguration: {
+        Behavior: AssociatedMenuBehavior.UseCollectionName,
+        Group: AssociatedMenuGroup.Details,
+        Order: 10000
+      },
       Lookup: {
-        AttributeType: 'Lookup',
+        '@odata.type': 'Microsoft.Dynamics.CRM.LookupAttributeMetadata',
+        AttributeType: AttributeTypeCode.Lookup,
         SchemaName: relationship.lookupField.schemaName,
-        LogicalName: relationship.lookupField.logicalName
-      }
+        LogicalName: relationship.lookupField.logicalName,
+        DisplayName: {
+          '@odata.type': 'Microsoft.Dynamics.CRM.LocalizedLabel',
+          Label: relationship.lookupField.displayName,
+          LanguageCode: 1033
+        },
+        IsPrimaryId: false,
+        IsPrimaryName: false,
+        IsValidForCreate: true,
+        IsValidForRead: true,
+        IsValidForUpdate: true,
+        RequiredLevel: RequiredLevel.ApplicationRequired,
+        IsCustomAttribute: true,
+        Targets: [relationship.parentTable.logicalName]
+      } as LookupAttributeMetadata
     };
   }
 
   // Generate table metadata for Dataverse API
-  generateTableMetadata(logicalName: string) {
+  generateTableMetadata(logicalName: string): TableMetadata {
     const table = this.tables.get(logicalName);
     if (!table) {
       throw new Error(`Table not found: ${logicalName}`);
     }
 
     return {
+      '@odata.type': 'Microsoft.Dynamics.CRM.EntityMetadata',
       LogicalName: table.logicalName,
       SchemaName: table.schemaName,
+      EntitySetName: `${table.logicalName}s`,
       DisplayName: {
-        UserLocalizedLabel: {
-          Label: table.displayName,
-          LanguageCode: 1033
-        }
+        '@odata.type': 'Microsoft.Dynamics.CRM.LocalizedLabel',
+        Label: table.displayName,
+        LanguageCode: 1033
       },
+      DisplayCollectionName: {
+        '@odata.type': 'Microsoft.Dynamics.CRM.LocalizedLabel',
+        Label: `${table.displayName}s`,
+        LanguageCode: 1033
+      },
+      PrimaryIdAttribute: `${table.logicalName}id`,
       PrimaryNameAttribute: `${this.publisherPrefix}_name`,
+      IsCustomEntity: true,
+      OwnershipType: OwnershipType.OrganizationOwned,
       HasNotes: false,
-      HasActivities: false,
-      Attributes: [
-        {
-          LogicalName: `${this.publisherPrefix}_name`,
-          SchemaName: `${this.publisherPrefix}_Name`,
-          AttributeType: 'String',
-          DisplayName: {
-            UserLocalizedLabel: {
-              Label: 'Name',
-              LanguageCode: 1033
-            }
-          },
-          RequiredLevel: {
-            Value: 'ApplicationRequired'
-          },
-          MaxLength: 100
-        }
-      ]
+      HasActivities: false
     };
   }
 
@@ -192,5 +229,4 @@ class DataverseSchemaManager {
   }
 }
 
-export { DataverseSchemaManager };
-export type { TableDefinition, RelationshipDefinition };
+export default DataverseSchemaManager;

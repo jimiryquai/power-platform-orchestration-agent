@@ -1,0 +1,21 @@
+{
+  "success": true,
+  "validation": {
+    "isValid": true,
+    "errors": [],
+    "suggestions": [
+      "Consider adding integration testing phase",
+      "Power Platform license costs should be validated",
+      "Add backup and disaster recovery requirements"
+    ],
+    "workItemsAnalysis": {
+      "totalWorkItems": 14,
+      "estimatedEffort": "36 story points",
+      "riskFactors": [
+        "Complex integration requirements",
+        "Multiple environments"
+      ]
+    }
+  },
+  "message": "PRD validation passed with suggestions"
+}

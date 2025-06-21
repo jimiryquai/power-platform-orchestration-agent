@@ -1,9 +1,9 @@
 // Test our Power Platform types and utilities
 
 import {
-  getNavigationPropertyName,
+  createOneToManyRelationship,
   createRecordWithLookup,
-  createOneToManyRelationship
+  getNavigationPropertyName
 } from './power-platform';
 
 // Test navigation property name generation

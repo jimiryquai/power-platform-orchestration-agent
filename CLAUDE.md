@@ -18,9 +18,10 @@ npm run build        # Build the project
 - `src/templates/s-project-template.yaml` - S-Project template definition
 - `src/workflows/orchestrator.js` - Main orchestration logic (needs n8n removal)
 - `src/config/index.js` - Environment configuration
-- `PROJECT_NOTES.md` - Architecture decisions and session history
+- `ai_docs/architecture-decisions.md` - Architecture decisions and key insights
 - `_project_progress/` - Session tracking and progress logs
-- `.claude/rules/` - Persona and domain-specific prompt instructions
+- `ai_docs/session-context.md` - Quick session startup context
+- `specs/` - Detailed technical specifications
 
 ## Power Platform / Dataverse Patterns (CRITICAL KNOWLEDGE)
 
@@ -267,16 +268,18 @@ When ending a session:
 - Keep functions focused and small
 - Document complex business logic
 
-## Persona and Prompt Instructions
+## AI Productivity System
 
-The `.claude/rules/` folder contains domain-specific prompt instructions:
+The project uses a three-folder AI productivity system:
 
-- **`developer-persona.mdc`** - Core developer identity, work standards, and behavioral guidelines
-- **`typescript-migration.mdc`** - Comprehensive TypeScript migration strategy and patterns
-- **`power-platform-domain.mdc`** - Power Platform architecture knowledge and integration patterns
-- **`testing-strategy.mdc`** - TDD approach with integration-first testing philosophy
+- **`ai_docs/`** - Persistent memory with session context, quick reference, and common tasks
+- **`specs/`** - Detailed technical specifications for focused development work
+- **`.claude/`** - Commands and settings for Claude Desktop integration
 
-These files define how Claude should approach development tasks, maintain code quality standards, and apply domain expertise to Power Platform automation challenges.
+Key files for new sessions:
+- **`ai_docs/session-context.md`** - Essential project context for immediate productivity
+- **`ai_docs/quick-reference.md`** - Commands, patterns, and troubleshooting
+- **`specs/`** - Implementation specifications for all major components
 
 ## Links and Resources
 - [Azure DevOps REST API](https://docs.microsoft.com/en-us/rest/api/azure/devops/)
@@ -285,6 +288,6 @@ These files define how Claude should approach development tasks, maintain code q
 - [MCP Protocol Documentation](https://modelcontextprotocol.io/docs)
 
 ---
-*For architecture decisions and project history, see PROJECT_NOTES.md*
+*For architecture decisions and project history, see ai_docs/architecture-decisions.md*
 *For session-specific progress, see _project_progress/ folder*
-*For persona and behavioral guidelines, see .claude/rules/ folder*
+*For quick project context, see ai_docs/session-context.md*

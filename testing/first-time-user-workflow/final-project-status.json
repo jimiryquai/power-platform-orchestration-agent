@@ -1,0 +1,38 @@
+{
+  "success": true,
+  "operation": {
+    "operationId": "proj_1750497478511_prd",
+    "status": "completed",
+    "startedAt": "2025-06-21T09:17:58.511Z",
+    "completedAt": "2025-06-21T09:17:58.516Z",
+    "progress": {
+      "totalSteps": 8,
+      "completedSteps": 8,
+      "currentStep": "Project creation completed"
+    }
+  },
+  "results": {
+    "azureDevOps": {
+      "projectCreated": true,
+      "projectUrl": "https://dev.azure.com/jamesryandev/CustomerSupportPortal",
+      "workItemsCreated": 14,
+      "repositoriesCreated": 3,
+      "pipelinesConfigured": 2
+    },
+    "powerPlatform": {
+      "environmentsCreated": 3,
+      "solutionsCreated": 2,
+      "publisherRegistered": true
+    },
+    "summary": {
+      "totalDuration": "45 seconds (simulated)",
+      "readyForDevelopment": true,
+      "nextSteps": [
+        "Assign work items to team members",
+        "Configure solution deployment pipelines",
+        "Begin development in first sprint"
+      ]
+    }
+  },
+  "message": "Project created successfully from PRD"
+}

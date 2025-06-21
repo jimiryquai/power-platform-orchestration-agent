@@ -1,29 +1,54 @@
 // Schema-aware Power Platform client that automatically handles navigation properties
-import { DataverseSchemaManager } from '../../types/dataverse-schema';
+import { DataverseSchemaManager, RelationshipDefinition, TableDefinition } from '../../types/dataverse-schema';
+import { 
+  EntityRecord
+} from '../../types/power-platform-interfaces';
+import { PowerPlatformMCPClient } from './power-platform-client';
 
-interface PowerPlatformClientBase {
-  createTable(tableData: any, environmentUrl: string): Promise<any>;
-  createOneToManyRelationship(relationshipData: any, environmentUrl: string): Promise<any>;
-  createRecord(entityName: string, recordData: any, environmentUrl: string): Promise<any>;
-  createMultipleRecords(entityName: string, records: any[], environmentUrl: string): Promise<any>;
-  addTableToSolution(tableName: string, solutionName: string, environmentUrl: string): Promise<any>;
+// Custom response types that match our client
+type PowerPlatformCreateResponse = 
+  | { success: true; data: { id: string; message: string } }
+  | { success: false; error: string };
+
+type CreateTableResult = PowerPlatformCreateResponse & {
+  tableDefinition: TableDefinition;
+};
+
+type CreateRelationshipResult = PowerPlatformCreateResponse & {
+  relationshipDefinition: RelationshipDefinition;
+};
+
+interface ChildRecordData {
+  data: EntityRecord;
+  parentId: string;
+}
+
+interface SchemaInfo {
+  tables: TableDefinition[];
+  relationships: RelationshipDefinition[];
+}
+
+interface CreateChildRecordOptions {
+  childDisplayName: string;
+  parentDisplayName: string;
+  recordData: EntityRecord;
+  parentId: string;
+  environmentUrl: string;
 }
 
 export class SchemaAwarePowerPlatformClient {
   private schema = new DataverseSchemaManager('jr');
   
-  constructor(private baseClient: PowerPlatformClientBase) {}
+  constructor(private baseClient: PowerPlatformMCPClient) {}
 
   // Create table and register it in schema
-  async createTable(displayName: string, environmentUrl: string) {
+  async createTable(displayName: string, environmentUrl: string): Promise<CreateTableResult> {
     const tableDef = this.schema.registerTable(displayName);
     const tableMetadata = this.schema.generateTableMetadata(tableDef.logicalName);
     
     const result = await this.baseClient.createTable(tableMetadata, environmentUrl);
     
-    if (result.success) {
-      console.log(`✅ Table created and registered: ${displayName} (${tableDef.logicalName})`);
-    }
+    // Table created successfully
     
     return { ...result, tableDefinition: tableDef };
   }
@@ -34,7 +59,7 @@ export class SchemaAwarePowerPlatformClient {
     childDisplayName: string,
     environmentUrl: string,
     lookupDisplayName?: string
-  ) {
+  ): Promise<CreateRelationshipResult> {
     // Get registered tables
     const parentTable = this.schema.getRegisteredTables().find(t => t.displayName === parentDisplayName);
     const childTable = this.schema.getRegisteredTables().find(t => t.displayName === childDisplayName);
@@ -53,22 +78,14 @@ export class SchemaAwarePowerPlatformClient {
     
     const result = await this.baseClient.createOneToManyRelationship(relationshipMetadata, environmentUrl);
     
-    if (result.success) {
-      console.log(`✅ Relationship created: ${parentDisplayName} -> ${childDisplayName}`);
-      console.log(`📋 Navigation property: ${this.schema.getNavigationProperty(childTable.logicalName, parentTable.logicalName)}`);
-    }
+    // Relationship created successfully
     
     return { ...result, relationshipDefinition: relationshipDef };
   }
 
   // Create child record with automatic lookup reference
-  async createChildRecord(
-    childDisplayName: string,
-    parentDisplayName: string,
-    recordData: Record<string, any>,
-    parentId: string,
-    environmentUrl: string
-  ) {
+  async createChildRecord(options: CreateChildRecordOptions): Promise<PowerPlatformCreateResponse> {
+    const { childDisplayName, parentDisplayName, recordData, parentId, environmentUrl } = options;
     const parentTable = this.schema.getRegisteredTables().find(t => t.displayName === parentDisplayName);
     const childTable = this.schema.getRegisteredTables().find(t => t.displayName === childDisplayName);
     
@@ -83,10 +100,10 @@ export class SchemaAwarePowerPlatformClient {
       parentId
     );
 
-    console.log(`🔗 Creating child record with lookup:`, recordWithLookup);
+    // Creating child record with lookup
     
     return await this.baseClient.createRecord(
-      childTable.logicalName + 's', // Pluralize for entity set
+      `${childTable.logicalName}s`, // Pluralize for entity set
       recordWithLookup,
       environmentUrl
     );
@@ -96,9 +113,9 @@ export class SchemaAwarePowerPlatformClient {
   async createMultipleChildRecords(
     childDisplayName: string,
     parentDisplayName: string,
-    recordsData: Array<{ data: Record<string, any>, parentId: string }>,
+    recordsData: ChildRecordData[],
     environmentUrl: string
-  ) {
+  ): Promise<PowerPlatformCreateResponse[]> {
     const parentTable = this.schema.getRegisteredTables().find(t => t.displayName === parentDisplayName);
     const childTable = this.schema.getRegisteredTables().find(t => t.displayName === childDisplayName);
     
@@ -115,17 +132,17 @@ export class SchemaAwarePowerPlatformClient {
       )
     );
 
-    console.log(`🔗 Creating ${recordsWithLookups.length} child records with lookups`);
+    // Creating multiple child records with lookups
     
     return await this.baseClient.createMultipleRecords(
-      childTable.logicalName + 's', // Pluralize for entity set
+      `${childTable.logicalName}s`, // Pluralize for entity set
       recordsWithLookups,
       environmentUrl
     );
   }
 
   // Add table to solution by display name
-  async addTableToSolution(displayName: string, solutionName: string, environmentUrl: string) {
+  async addTableToSolution(displayName: string, solutionName: string, environmentUrl: string): Promise<PowerPlatformCreateResponse> {
     const table = this.schema.getRegisteredTables().find(t => t.displayName === displayName);
     if (!table) {
       throw new Error(`Table not registered: ${displayName}`);
@@ -135,7 +152,7 @@ export class SchemaAwarePowerPlatformClient {
   }
 
   // Debug info
-  getSchema() {
+  getSchema(): SchemaInfo {
     return {
       tables: this.schema.getRegisteredTables(),
       relationships: this.schema.getRegisteredRelationships()

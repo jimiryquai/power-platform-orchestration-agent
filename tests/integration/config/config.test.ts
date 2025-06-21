@@ -120,22 +120,16 @@ describe('Configuration Module Integration', () => {
       const config = require('../../../src/config').default;
 
       // Assert
-      expect(config.n8n.host).toBe('localhost');
-      expect(config.n8n.port).toBe(5678);
-      expect(config.n8n.protocol).toBe('http');
-      expect(config.n8n.baseUrl).toBe('http://localhost:5678');
-      
-      expect(config.redis.host).toBe('localhost');
-      expect(config.redis.port).toBe(6379);
-      expect(config.redis.password).toBeUndefined();
+      expect(config.app.environment).toBe('test');
+      expect(config.app.port).toBe(4000);
+      expect(config.app.logLevel).toBe('debug');
     });
 
     it('should configure MCP server settings correctly', () => {
       // Arrange
       process.env.MCP_AZURE_DEVOPS_ENABLED = 'true';
       process.env.MCP_MICROSOFT_GRAPH_ENABLED = 'true';
-      process.env.MCP_N8N_ENABLED = 'false';
-      process.env.MCP_DOCKER_ENABLED = 'false';
+      process.env.MCP_POWER_PLATFORM_ENABLED = 'false';
 
       // Act
       const config = require('../../../src/config').default;
@@ -144,8 +138,7 @@ describe('Configuration Module Integration', () => {
       expect(config.mcp.azureDevOps.enabled).toBe(true);
       expect(config.mcp.azureDevOps.serverName).toBe('azure-devops');
       expect(config.mcp.microsoftGraph.enabled).toBe(true);
-      expect(config.mcp.n8n.enabled).toBe(false);
-      expect(config.mcp.docker.enabled).toBe(false);
+      expect(config.mcp.powerPlatform.enabled).toBe(false);
     });
 
     it('should handle template directory configuration', () => {
@@ -162,8 +155,6 @@ describe('Configuration Module Integration', () => {
     it('should parse numeric environment variables correctly', () => {
       // Arrange
       process.env.PORT = '3001';
-      process.env.N8N_PORT = '5679';
-      process.env.REDIS_PORT = '6380';
 
       // Act
       const config = require('../../../src/config').default;
@@ -171,31 +162,24 @@ describe('Configuration Module Integration', () => {
       // Assert
       expect(typeof config.app.port).toBe('number');
       expect(config.app.port).toBe(3001);
-      expect(typeof config.n8n.port).toBe('number');
-      expect(config.n8n.port).toBe(5679);
-      expect(typeof config.redis.port).toBe('number');
-      expect(config.redis.port).toBe(6380);
     });
 
     it('should handle invalid numeric values with defaults', () => {
       // Arrange
       process.env.PORT = 'invalid';
-      process.env.N8N_PORT = 'not-a-number';
 
       // Act
       const config = require('../../../src/config').default;
 
       // Assert
       expect(config.app.port).toBe(3000); // Should fall back to default
-      expect(config.n8n.port).toBe(5678); // Should fall back to default
     });
 
     it('should handle boolean environment variables correctly', () => {
       // Arrange
       process.env.MCP_AZURE_DEVOPS_ENABLED = 'true';
       process.env.MCP_MICROSOFT_GRAPH_ENABLED = 'false';
-      process.env.MCP_N8N_ENABLED = 'TRUE'; // Test case insensitivity
-      process.env.MCP_DOCKER_ENABLED = 'anything-else';
+      process.env.MCP_POWER_PLATFORM_ENABLED = 'TRUE'; // Test case insensitivity
 
       // Act
       const config = require('../../../src/config').default;
@@ -203,8 +187,7 @@ describe('Configuration Module Integration', () => {
       // Assert
       expect(config.mcp.azureDevOps.enabled).toBe(true);
       expect(config.mcp.microsoftGraph.enabled).toBe(false);
-      expect(config.mcp.n8n.enabled).toBe(false); // Only lowercase 'true' should be true
-      expect(config.mcp.docker.enabled).toBe(false);
+      expect(config.mcp.powerPlatform.enabled).toBe(false); // Only lowercase 'true' should be true
     });
   });
 });
