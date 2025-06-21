@@ -86,7 +86,7 @@ export class SolutionManager {
     this.adminClient = new PowerPlatformAdminClient(config.adminClient);
     this.schemaClient = new SchemaAwarePowerPlatformClient();
 
-    console.log('Solution Manager initialized', {
+    console.error('Solution Manager initialized', {
       defaultVersion: config.defaultVersion,
       componentBatchSize: config.componentBatchSize
     });
@@ -105,7 +105,7 @@ export class SolutionManager {
     const startTime = Date.now();
     
     try {
-      console.log(`Creating solution: ${solutionTemplate.uniqueName}`);
+      console.error(`Creating solution: ${solutionTemplate.uniqueName}`);
 
       // Create the solution
       const solutionResult = await this.adminClient.createSolution(
@@ -161,7 +161,7 @@ export class SolutionManager {
         warnings
       };
 
-      console.log(`✅ Solution created: ${solution.uniqueName} with ${componentsAdded} components`);
+      console.error(`✅ Solution created: ${solution.uniqueName} with ${componentsAdded} components`);
       return { success: true, data: result };
     } catch (error) {
       console.error(`❌ Failed to create solution ${solutionTemplate.uniqueName}:`, error);
@@ -186,7 +186,7 @@ export class SolutionManager {
     warnings: readonly string[];
   }>> {
     try {
-      console.log(`Adding ${components.length} components to solution: ${solutionUniqueName}`);
+      console.error(`Adding ${components.length} components to solution: ${solutionUniqueName}`);
 
       const warnings: string[] = [];
       let added = 0;
@@ -229,7 +229,7 @@ export class SolutionManager {
         });
       }
 
-      console.log(`✅ Component addition completed: ${added} added, ${failed} failed`);
+      console.error(`✅ Component addition completed: ${added} added, ${failed} failed`);
       
       return {
         success: true,
@@ -294,7 +294,7 @@ export class SolutionManager {
     }
   ): Promise<PowerPlatformResponse<SolutionExportResult>> {
     try {
-      console.log(`Exporting solution: ${solutionUniqueName}`);
+      console.error(`Exporting solution: ${solutionUniqueName}`);
 
       // This would typically call the Dataverse ExportSolution action
       // For now, we'll simulate the export process
@@ -320,7 +320,7 @@ export class SolutionManager {
         }
       };
 
-      console.log(`✅ Solution exported: ${solutionUniqueName}`);
+      console.error(`✅ Solution exported: ${solutionUniqueName}`);
       return { success: true, data: result };
     } catch (error) {
       console.error(`❌ Failed to export solution ${solutionUniqueName}:`, error);
@@ -342,7 +342,7 @@ export class SolutionManager {
     }
   ): Promise<PowerPlatformResponse<SolutionImportResult>> {
     try {
-      console.log('Importing solution to environment');
+      console.error('Importing solution to environment');
 
       // This would typically call the Dataverse ImportSolution action
       // For now, we'll simulate the import process
@@ -355,7 +355,7 @@ export class SolutionManager {
         warnings: []
       };
 
-      console.log(`✅ Solution imported successfully: ${importResult.importId}`);
+      console.error(`✅ Solution imported successfully: ${importResult.importId}`);
       return { success: true, data: importResult };
     } catch (error) {
       console.error('❌ Failed to import solution:', error);
@@ -382,7 +382,7 @@ export class SolutionManager {
     }>;
   }>> {
     try {
-      console.log(`Validating solution: ${solutionUniqueName}`);
+      console.error(`Validating solution: ${solutionUniqueName}`);
 
       const issues: Array<{
         type: 'error' | 'warning' | 'info';
@@ -406,7 +406,7 @@ export class SolutionManager {
 
       const isValid = issues.filter(issue => issue.type === 'error').length === 0;
 
-      console.log(`✅ Solution validation completed: ${isValid ? 'VALID' : 'INVALID'}`);
+      console.error(`✅ Solution validation completed: ${isValid ? 'VALID' : 'INVALID'}`);
       
       return {
         success: true,
@@ -527,7 +527,7 @@ export class SolutionManager {
     options?: SolutionDeploymentOptions
   ): Promise<PowerPlatformResponse<SolutionImportResult>> {
     try {
-      console.log(`Deploying solution ${solutionUniqueName} from ${sourceEnvironmentUrl} to ${targetEnvironmentUrl}`);
+      console.error(`Deploying solution ${solutionUniqueName} from ${sourceEnvironmentUrl} to ${targetEnvironmentUrl}`);
 
       // Validate solution before deployment
       if (options?.validateBeforeDeploy !== false) {
@@ -556,7 +556,7 @@ export class SolutionManager {
         timeoutMs: options?.timeoutMs
       });
 
-      console.log(`✅ Solution deployment completed: ${solutionUniqueName}`);
+      console.error(`✅ Solution deployment completed: ${solutionUniqueName}`);
       return importResult;
     } catch (error) {
       console.error(`❌ Failed to deploy solution ${solutionUniqueName}:`, error);

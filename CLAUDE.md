@@ -3,6 +3,35 @@
 ## Project Overview
 An intelligent conversational orchestration agent that automates enterprise-level Power Platform project setup and management through Claude Desktop integration with specialized MCP servers.
 
+## MCP Architecture (CRITICAL - DO NOT FORGET)
+
+### Two-Layer MCP Architecture
+```
+Claude Desktop
+  ↓ 
+Orchestration MCP Server (standards-compliant-server.ts)
+  - Provides template-driven workflows (S/M/L projects)
+  - Coordinates cross-service operations
+  - Handles complex multi-step project creation
+  - Tools: list_templates, validate_prd, create_project, get_project_status, get_template_details, create_app_registration
+  ↓ calls ↓
+Individual MCP Servers:
+  - Azure DevOps MCP (existing, working)
+  - Power Platform MCP (needs to be built)
+  - Microsoft Graph MCP (needs to be built)
+```
+
+### Why We Need BOTH Layers:
+1. **Individual MCP Servers** - Single-service operations (create environment, create work item, etc.)
+2. **Orchestration MCP Server** - Template-driven workflows that coordinate multiple services
+
+### Templates Drive Orchestration:
+- **S-Project**: Simple setup (1 environment, basic config)
+- **M-Project**: Multi-environment with ALM pipelines
+- **L-Project**: Enterprise-scale with governance and multiple regions
+
+**NEVER suggest removing the orchestration layer** - it's essential for template-based project creation workflows.
+
 ## Common Commands
 ```bash
 npm run dev          # Start development server
@@ -13,11 +42,23 @@ npm run build        # Build the project
 ```
 
 ## Key Files and Their Purpose
-- `src/integrations/azure-devops/mcp-client.js` - Azure DevOps API integration (working)
-- `src/integrations/power-platform/mcp-client.js` - Power Platform Dataverse API integration (working)
+
+### MCP Servers
+- `src/mcp/standards-compliant-server.ts` - **Orchestration MCP Server** (template-driven workflows)
+- `src/mcp/power-platform-mcp-server.ts` - **Power Platform MCP Server** (needs to be built)
+- `src/mcp/microsoft-graph-mcp-server.ts` - **Microsoft Graph MCP Server** (needs to be built)
+- Azure DevOps MCP Server - External (already working)
+
+### Core Integration Clients
+- `src/integrations/power-platform/admin-client.ts` - Power Platform Admin API client
+- `src/integrations/power-platform/environment-manager.ts` - Environment lifecycle management
+- `src/integrations/power-platform/solution-manager.ts` - Solution lifecycle management
+- `src/integrations/microsoft-graph/graph-client.ts` - Microsoft Graph API client
+- `src/orchestration/project-orchestrator.ts` - Cross-service project orchestration logic
+
+### Templates and Configuration
 - `src/templates/s-project-template.yaml` - S-Project template definition
-- `src/workflows/orchestrator.js` - Main orchestration logic (needs n8n removal)
-- `src/config/index.js` - Environment configuration
+- `src/config/index.ts` - Environment configuration
 - `ai_docs/architecture-decisions.md` - Architecture decisions and key insights
 - `_project_progress/` - Session tracking and progress logs
 - `ai_docs/session-context.md` - Quick session startup context

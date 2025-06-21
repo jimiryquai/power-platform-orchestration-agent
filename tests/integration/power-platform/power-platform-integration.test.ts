@@ -350,8 +350,10 @@ describe('Power Platform Integration Tests', () => {
       
       expect(result).toBeDefined();
       expect(result.success).toBe(false);
-      expect(result.error).toBeDefined();
-      console.log(`✅ Invalid environment URL handled correctly: ${result.error}`);
+      if (!result.success) {
+        expect(result.error).toBeDefined();
+        console.log(`✅ Invalid environment URL handled correctly: ${result.error}`);
+      }
     });
 
     test('should handle network timeouts gracefully', async () => {

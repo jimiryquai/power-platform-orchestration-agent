@@ -322,7 +322,7 @@ export class GenericApiClient implements ApiClient {
       headers: this.sanitizeHeaders(request.headers)
     };
 
-    console.log(`[API Client] Request: ${JSON.stringify(logData)}`);
+    console.error(`[API Client] Request: ${JSON.stringify(logData)}`);
   }
 
   private logResponse<T>(response: ApiResponse<T>): void {
@@ -335,7 +335,7 @@ export class GenericApiClient implements ApiClient {
       headers: this.sanitizeHeaders(response.headers)
     };
 
-    console.log(`[API Client] Response: ${JSON.stringify(logData)}`);
+    console.error(`[API Client] Response: ${JSON.stringify(logData)}`);
   }
 
   private logError(error: unknown, attempt: number, maxAttempts: number): void {

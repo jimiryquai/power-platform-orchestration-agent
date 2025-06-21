@@ -1,0 +1,23 @@
+{
+  "name": "@power-platform/orchestration-mcp",
+  "version": "1.0.0",
+  "description": "MCP server for Power Platform orchestration",
+  "type": "module",
+  "bin": {
+    "power-platform-mcp": "dist/mcp/orchestration-server.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc --project tsconfig.mcp.json",
+    "start": "node dist/mcp/orchestration-server.js"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.12.1",
+    "zod": "^3.25.55"
+  },
+  "devDependencies": {
+    "typescript": "^5.8.3"
+  }
+}

@@ -213,7 +213,7 @@ export class PowerPlatformMcpServer {
     this.setupErrorHandling();
     
     if (config.enableDebugLogging) {
-      console.log('🔧 Power Platform MCP Server initialized', {
+      console.error('🔧 Power Platform MCP Server initialized', {
         serverName: this.server.name,
         toolCount: MCP_TOOLS.length,
         azureDevOpsOrg: config.orchestrationConfig.azureDevOps.organization
@@ -229,13 +229,13 @@ export class PowerPlatformMcpServer {
     const transport = new StdioServerTransport();
     await this.server.connect(transport);
     
-    console.log('🚀 Power Platform MCP Server started');
-    console.log(`📋 Available tools: ${MCP_TOOLS.map(t => t.name).join(', ')}`);
+    console.error('🚀 Power Platform MCP Server started');
+    console.error(`📋 Available tools: ${MCP_TOOLS.map(t => t.name).join(', ')}`);
   }
 
   async stop(): Promise<void> {
     await this.server.close();
-    console.log('🛑 Power Platform MCP Server stopped');
+    console.error('🛑 Power Platform MCP Server stopped');
   }
 
   // ============================================================================
@@ -311,7 +311,7 @@ export class PowerPlatformMcpServer {
 
     const options = args.options || {};
     
-    console.log(`🚀 Creating project via MCP: ${request.projectName}`);
+    console.error(`🚀 Creating project via MCP: ${request.projectName}`);
     
     const result = await this.orchestrator.createProject(request, options);
     
@@ -349,7 +349,7 @@ export class PowerPlatformMcpServer {
   private async handleGetProjectStatus(args: any): Promise<any> {
     this.validateArgs(args, ['operationId']);
     
-    console.log(`📊 Getting project status via MCP: ${args.operationId}`);
+    console.error(`📊 Getting project status via MCP: ${args.operationId}`);
     
     const result = await this.orchestrator.getOperationStatus(args.operationId);
     
@@ -383,7 +383,7 @@ export class PowerPlatformMcpServer {
   }
 
   private async handleListTemplates(args: any): Promise<any> {
-    console.log('📋 Listing templates via MCP');
+    console.error('📋 Listing templates via MCP');
     
     // In a real implementation, this would query a template repository
     const templates: ListTemplatesResponse = {
@@ -478,7 +478,7 @@ export class PowerPlatformMcpServer {
   private async handleValidatePrd(args: any): Promise<any> {
     this.validateArgs(args, ['prd']);
     
-    console.log('✅ Validating PRD via MCP');
+    console.error('✅ Validating PRD via MCP');
     
     const { prd, templateName } = args;
     
@@ -531,7 +531,7 @@ export class PowerPlatformMcpServer {
   private async handleGetTemplateDetails(args: any): Promise<any> {
     this.validateArgs(args, ['templateName']);
     
-    console.log(`📖 Getting template details via MCP: ${args.templateName}`);
+    console.error(`📖 Getting template details via MCP: ${args.templateName}`);
     
     const { templateName } = args;
     
@@ -633,7 +633,7 @@ export class PowerPlatformMcpServer {
     };
 
     process.on('SIGINT', async () => {
-      console.log('\n🛑 Received SIGINT, shutting down MCP server...');
+      console.error('\n🛑 Received SIGINT, shutting down MCP server...');
       await this.stop();
       process.exit(0);
     });

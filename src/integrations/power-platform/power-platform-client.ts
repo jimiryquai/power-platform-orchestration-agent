@@ -124,14 +124,14 @@ export class PowerPlatformMCPClient {
     this.authUrl = `https://login.microsoftonline.com/${this.tenantId}/oauth2/v2.0/token`;
     this.useInteractiveAuth = process.env.AZURE_USE_INTERACTIVE_AUTH === 'true';
 
-    console.log('Power Platform MCP Client initialized', {
+    console.error('Power Platform MCP Client initialized', {
       useInteractiveAuth: this.useInteractiveAuth
     });
   }
 
   async connect(): Promise<boolean> {
     try {
-      console.log('Testing Power Platform connection...', {
+      console.error('Testing Power Platform connection...', {
         useInteractiveAuth: this.useInteractiveAuth
       });
 
@@ -153,7 +153,7 @@ export class PowerPlatformMCPClient {
       }
 
       this.isConnected = true;
-      console.log('Power Platform connection validated successfully');
+      console.error('Power Platform connection validated successfully');
       return true;
     } catch (error) {
       console.error('Power Platform connection failed:', error);
@@ -196,7 +196,7 @@ export class PowerPlatformMCPClient {
       // Set expiry to 5 minutes before actual expiry for safety
       this.tokenExpiry = Date.now() + ((response.data.expires_in - 300) * 1000);
 
-      console.log('Power Platform access token obtained successfully');
+      console.error('Power Platform access token obtained successfully');
       return { success: true, token: this.accessToken || '' };
     } catch (error) {
       const axiosError = error as AxiosError;
@@ -219,7 +219,7 @@ export class PowerPlatformMCPClient {
       }
 
       const azLoginCmd = `az account get-access-token --scope "${scope}" --output json`;
-      console.log('Executing Azure CLI command for interactive auth...');
+      console.error('Executing Azure CLI command for interactive auth...');
       
       const { stdout } = await execAsync(azLoginCmd);
       const tokenData = JSON.parse(stdout);
@@ -227,7 +227,7 @@ export class PowerPlatformMCPClient {
       this.accessToken = tokenData.accessToken;
       this.tokenExpiry = new Date(tokenData.expiresOn).getTime();
       
-      console.log('Interactive authentication successful');
+      console.error('Interactive authentication successful');
       return { success: true, token: this.accessToken || '' };
     } catch (error) {
       console.error('Interactive authentication failed:', error);
@@ -643,7 +643,7 @@ export class PowerPlatformMCPClient {
     this.isConnected = false;
     this.accessToken = null;
     this.tokenExpiry = null;
-    console.log('Power Platform client disconnected');
+    console.error('Power Platform client disconnected');
   }
 }
 

@@ -12,9 +12,6 @@ import {
   AddSolutionComponentRequest
 } from '../../types/api-contracts';
 import { 
-  PowerPlatformConfig,
-  DataversePublisher,
-  DataverseSolution,
   EnvironmentInfo,
   EnvironmentType,
   EnvironmentStatus
@@ -73,7 +70,7 @@ export class PowerPlatformAdminClient {
     this.config = config;
     this.client = createPowerPlatformAdminApiClient(config.accessToken);
     
-    console.log('Power Platform Admin Client initialized', {
+    console.error('Power Platform Admin Client initialized', {
       defaultRegion: config.defaultRegion,
       defaultCurrency: config.defaultCurrency,
       defaultLanguage: config.defaultLanguage
@@ -86,7 +83,7 @@ export class PowerPlatformAdminClient {
 
   async listEnvironments(): Promise<PowerPlatformResponse<Environment[]>> {
     try {
-      console.log('Listing Power Platform environments...');
+      console.error('Listing Power Platform environments...');
       
       const response = await this.client.get<ListEnvironmentsResponse>('/environments');
       
@@ -97,8 +94,8 @@ export class PowerPlatformAdminClient {
         };
       }
 
-      console.log(`✅ Found ${response.data.value.length} environments`);
-      return { success: true, data: response.data.value };
+      console.error(`✅ Found ${response.data.value.length} environments`);
+      return { success: true, data: [...response.data.value] };
     } catch (error) {
       console.error('❌ Failed to list environments:', error);
       return { 
@@ -110,7 +107,7 @@ export class PowerPlatformAdminClient {
 
   async getEnvironment(environmentName: string): Promise<PowerPlatformResponse<Environment>> {
     try {
-      console.log(`Getting environment: ${environmentName}`);
+      console.error(`Getting environment: ${environmentName}`);
       
       const response = await this.client.get<Environment>(`/environments/${environmentName}`);
       
@@ -121,7 +118,7 @@ export class PowerPlatformAdminClient {
         };
       }
 
-      console.log(`✅ Retrieved environment: ${response.data.displayName}`);
+      console.error(`✅ Retrieved environment: ${response.data.displayName}`);
       return { success: true, data: response.data };
     } catch (error) {
       console.error(`❌ Failed to get environment ${environmentName}:`, error);
@@ -144,15 +141,15 @@ export class PowerPlatformAdminClient {
     }
   ): Promise<PowerPlatformResponse<EnvironmentCreationResult>> {
     try {
-      console.log(`Creating ${environmentType} environment: ${displayName}`);
+      console.error(`Creating ${environmentType} environment: ${displayName}`);
       
       const request: CreateEnvironmentRequest = {
         displayName,
         location: options?.region || this.config.defaultRegion || 'unitedstates',
         environmentSku: options?.sku || this.mapEnvironmentTypeToSku(environmentType),
         databaseType: options?.databaseType || 'CommonDataService',
-        currency: options?.currency ? { code: options.currency } : undefined,
-        language: options?.language ? { name: options.language } : undefined
+        ...(options?.currency && { currency: { code: options.currency } }),
+        ...(options?.language && { language: { name: options.language } })
       };
 
       const response = await this.client.post<CreateEnvironmentRequest, CreateEnvironmentResponse>(
@@ -174,13 +171,18 @@ export class PowerPlatformAdminClient {
           type: response.data.type,
           location: response.data.location,
           displayName: response.data.displayName,
-          properties: response.data.properties
+          properties: {
+            displayName: response.data.properties.displayName,
+            environmentSku: response.data.properties.environmentSku,
+            provisioningState: response.data.properties.provisioningState,
+            linkedEnvironmentMetadata: response.data.properties.linkedEnvironmentMetadata
+          }
         },
         instanceUrl: response.data.properties.linkedEnvironmentMetadata?.instanceUrl,
         uniqueName: response.data.properties.linkedEnvironmentMetadata?.uniqueName
       };
 
-      console.log(`✅ Created environment: ${result.environment.displayName}`);
+      console.error(`✅ Created environment: ${result.environment.displayName}`);
       return { success: true, data: result };
     } catch (error) {
       console.error(`❌ Failed to create environment ${displayName}:`, error);
@@ -193,7 +195,7 @@ export class PowerPlatformAdminClient {
 
   async deleteEnvironment(environmentName: string): Promise<PowerPlatformResponse<void>> {
     try {
-      console.log(`Deleting environment: ${environmentName}`);
+      console.error(`Deleting environment: ${environmentName}`);
       
       const response = await this.client.delete(`/environments/${environmentName}`);
       
@@ -204,7 +206,7 @@ export class PowerPlatformAdminClient {
         };
       }
 
-      console.log(`✅ Deleted environment: ${environmentName}`);
+      console.error(`✅ Deleted environment: ${environmentName}`);
       return { success: true, data: undefined };
     } catch (error) {
       console.error(`❌ Failed to delete environment ${environmentName}:`, error);
@@ -219,7 +221,7 @@ export class PowerPlatformAdminClient {
     environmentName: string,
     timeoutMs: number = 600000 // 10 minutes
   ): Promise<PowerPlatformResponse<Environment>> {
-    console.log(`Waiting for environment provisioning: ${environmentName}`);
+    console.error(`Waiting for environment provisioning: ${environmentName}`);
     
     const startTime = Date.now();
     const pollInterval = 10000; // 10 seconds
@@ -232,10 +234,10 @@ export class PowerPlatformAdminClient {
       }
 
       const provisioningState = envResult.data.properties.provisioningState;
-      console.log(`Environment ${environmentName} provisioning state: ${provisioningState}`);
+      console.error(`Environment ${environmentName} provisioning state: ${provisioningState}`);
 
       if (provisioningState === 'Succeeded') {
-        console.log(`✅ Environment ${environmentName} provisioned successfully`);
+        console.error(`✅ Environment ${environmentName} provisioned successfully`);
         return envResult;
       }
 
@@ -271,14 +273,14 @@ export class PowerPlatformAdminClient {
     }
   ): Promise<PowerPlatformResponse<SolutionDeploymentResult>> {
     try {
-      console.log(`Creating solution: ${solutionName} in ${environmentUrl}`);
+      console.error(`Creating solution: ${solutionName} in ${environmentUrl}`);
       
       const request: CreateSolutionRequest = {
         uniquename: solutionName,
         friendlyname: friendlyName,
-        description: options?.description,
         version: options?.version || '1.0.0.0',
-        publisherid: publisherId
+        publisherid: publisherId,
+        ...(options?.description && { description: options.description })
       };
 
       // Use Dataverse API directly for solution creation
@@ -302,7 +304,7 @@ export class PowerPlatformAdminClient {
         componentCount: 0
       };
 
-      console.log(`✅ Created solution: ${result.uniqueName}`);
+      console.error(`✅ Created solution: ${result.uniqueName}`);
       return { success: true, data: result };
     } catch (error) {
       console.error(`❌ Failed to create solution ${solutionName}:`, error);
@@ -324,14 +326,16 @@ export class PowerPlatformAdminClient {
     }
   ): Promise<PowerPlatformResponse<void>> {
     try {
-      console.log(`Adding component to solution: ${solutionUniqueName}`);
+      console.error(`Adding component to solution: ${solutionUniqueName}`);
       
       const request: AddSolutionComponentRequest = {
         ComponentType: componentType,
         ComponentId: componentId,
         SolutionUniqueName: solutionUniqueName,
         AddRequiredComponents: options?.addRequiredComponents ?? true,
-        IncludedComponentSettingsValues: options?.includedComponentSettingsValues
+        ...(options?.includedComponentSettingsValues && {
+          IncludedComponentSettingsValues: options.includedComponentSettingsValues
+        })
       };
 
       const dataverseClient = this.createDataverseClient(environmentUrl);
@@ -347,7 +351,7 @@ export class PowerPlatformAdminClient {
         };
       }
 
-      console.log(`✅ Added component to solution: ${solutionUniqueName}`);
+      console.error(`✅ Added component to solution: ${solutionUniqueName}`);
       return { success: true, data: undefined };
     } catch (error) {
       console.error(`❌ Failed to add solution component:`, error);
@@ -373,7 +377,7 @@ export class PowerPlatformAdminClient {
     }
   ): Promise<PowerPlatformResponse<PublisherCreationResult>> {
     try {
-      console.log(`Creating publisher: ${uniqueName} in ${environmentUrl}`);
+      console.error(`Creating publisher: ${uniqueName} in ${environmentUrl}`);
       
       const publisherData = {
         uniquename: uniqueName,
@@ -402,7 +406,7 @@ export class PowerPlatformAdminClient {
         customizationPrefix: response.data.customizationprefix
       };
 
-      console.log(`✅ Created publisher: ${result.uniqueName}`);
+      console.error(`✅ Created publisher: ${result.uniqueName}`);
       return { success: true, data: result };
     } catch (error) {
       console.error(`❌ Failed to create publisher ${uniqueName}:`, error);
@@ -433,6 +437,9 @@ export class PowerPlatformAdminClient {
   }
 
   private createDataverseClient(environmentUrl: string): ApiClient {
+    // Create a Dataverse client for the specific environment
+    // For now, using admin client - in production this should use environment-specific endpoint
+    console.error(`Creating Dataverse client for environment: ${environmentUrl}`);
     return createPowerPlatformAdminApiClient(this.config.accessToken);
   }
 

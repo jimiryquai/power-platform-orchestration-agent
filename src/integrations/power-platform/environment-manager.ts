@@ -3,12 +3,9 @@
 
 import PowerPlatformAdminClient, { 
   PowerPlatformResponse,
-  EnvironmentCreationResult,
   AdminClientConfig
 } from './admin-client';
-import { SchemaAwarePowerPlatformClient } from './schema-aware-client';
 import {
-  Environment,
   EnvironmentInfo,
   EnvironmentType,
   EnvironmentTemplate,
@@ -72,7 +69,7 @@ export class EnvironmentManager {
     this.config = config;
     this.adminClient = new PowerPlatformAdminClient(config.adminClient);
 
-    console.log('Environment Manager initialized', {
+    console.error('Environment Manager initialized', {
       defaultRegion: config.defaultRegion,
       environmentPrefix: config.environmentPrefix
     });
@@ -90,17 +87,17 @@ export class EnvironmentManager {
     const startTime = Date.now();
     
     try {
-      console.log(`Creating ${environmentType} environment: ${displayName}`);
+      console.error(`Creating ${environmentType} environment: ${displayName}`);
 
       // Create the environment
       const createResult = await this.adminClient.createEnvironment(
         displayName,
         environmentType,
         {
-          region: options?.region || this.config.defaultRegion,
-          currency: options?.currency || this.config.defaultCurrency,
-          language: options?.language || this.config.defaultLanguage,
-          sku: options?.sku,
+          region: options?.region || this.config.defaultRegion || 'unitedstates',
+          currency: options?.currency || this.config.defaultCurrency || 'USD',
+          language: options?.language || this.config.defaultLanguage || 'English',
+          sku: options?.sku || 'Sandbox',
           databaseType: options?.includeDatabase !== false ? 'CommonDataService' : 'None'
         }
       );
@@ -133,7 +130,7 @@ export class EnvironmentManager {
         setupTimeMs: Date.now() - startTime
       };
 
-      console.log(`✅ Environment setup completed in ${setupResult.setupTimeMs}ms`);
+      console.error(`✅ Environment setup completed in ${setupResult.setupTimeMs}ms`);
       return { success: true, data: setupResult };
     } catch (error) {
       console.error(`❌ Failed to create environment ${displayName}:`, error);
@@ -146,12 +143,12 @@ export class EnvironmentManager {
 
   async deleteEnvironment(environmentName: string): Promise<PowerPlatformResponse<void>> {
     try {
-      console.log(`Deleting environment: ${environmentName}`);
+      console.error(`Deleting environment: ${environmentName}`);
       
       const result = await this.adminClient.deleteEnvironment(environmentName);
       
       if (result.success) {
-        console.log(`✅ Environment ${environmentName} deleted successfully`);
+        console.error(`✅ Environment ${environmentName} deleted successfully`);
       }
       
       return result;
@@ -220,7 +217,7 @@ export class EnvironmentManager {
     const startTime = Date.now();
     
     try {
-      console.log(`Creating ${templates.length} environments from templates`);
+      console.error(`Creating ${templates.length} environments from templates`);
 
       const environments: EnvironmentSetupResult[] = [];
       const failed: Array<{ template: EnvironmentTemplate; error: string }> = [];
@@ -240,7 +237,7 @@ export class EnvironmentManager {
               environments.push(result.value.data);
             } else {
               const error = result.status === 'fulfilled' 
-                ? result.value.error 
+                ? (!result.value.success ? result.value.error : 'Unknown error')
                 : result.reason?.message || 'Unknown error';
               failed.push({ template: batch[index]!, error });
             }
@@ -261,7 +258,7 @@ export class EnvironmentManager {
 
       const totalTimeMs = Date.now() - startTime;
       
-      console.log(`✅ Environment creation completed: ${environments.length} successful, ${failed.length} failed`);
+      console.error(`✅ Environment creation completed: ${environments.length} successful, ${failed.length} failed`);
       
       return {
         success: true,
@@ -294,7 +291,7 @@ export class EnvironmentManager {
         sku: template.sku,
         currency: template.currency.code,
         language: template.language.code,
-        waitForProvisioning: options?.waitForProvisioning
+        waitForProvisioning: options?.waitForProvisioning ?? false
       }
     );
   }
@@ -308,7 +305,7 @@ export class EnvironmentManager {
     publisherTemplate: PublisherTemplate
   ): Promise<PowerPlatformResponse<DataversePublisher>> {
     try {
-      console.log(`Creating publisher: ${publisherTemplate.uniqueName}`);
+      console.error(`Creating publisher: ${publisherTemplate.uniqueName}`);
       
       const result = await this.adminClient.createPublisher(
         environmentUrl,
@@ -316,7 +313,7 @@ export class EnvironmentManager {
         publisherTemplate.friendlyName,
         publisherTemplate.customizationPrefix,
         {
-          description: publisherTemplate.description,
+          description: publisherTemplate.description || publisherTemplate.friendlyName,
           customizationOptionValuePrefix: publisherTemplate.customizationOptionValuePrefix
         }
       );
@@ -329,12 +326,12 @@ export class EnvironmentManager {
         publisherId: result.data.publisherId,
         uniqueName: result.data.uniqueName,
         friendlyName: publisherTemplate.friendlyName,
-        description: publisherTemplate.description,
+        description: publisherTemplate.description || publisherTemplate.friendlyName,
         customizationPrefix: result.data.customizationPrefix,
         customizationOptionValuePrefix: publisherTemplate.customizationOptionValuePrefix
       };
 
-      console.log(`✅ Created publisher: ${publisher.uniqueName}`);
+      console.error(`✅ Created publisher: ${publisher.uniqueName}`);
       return { success: true, data: publisher };
     } catch (error) {
       console.error(`❌ Failed to create publisher:`, error);
@@ -358,7 +355,7 @@ export class EnvironmentManager {
     }
   ): Promise<PowerPlatformResponse<void>> {
     try {
-      console.log(`Configuring environment: ${environmentUrl}`);
+      console.error(`Configuring environment: ${environmentUrl}`);
 
       // Create publisher if specified
       if (configuration.publisher) {
@@ -371,16 +368,16 @@ export class EnvironmentManager {
       // Configure security roles
       if (configuration.securityRoles && configuration.securityRoles.length > 0) {
         // Security role configuration would be implemented here
-        console.log(`Configuring ${configuration.securityRoles.length} security roles`);
+        console.error(`Configuring ${configuration.securityRoles.length} security roles`);
       }
 
       // Configure business process flows
       if (configuration.businessProcessFlows && configuration.businessProcessFlows.length > 0) {
         // Business process flow configuration would be implemented here
-        console.log(`Configuring ${configuration.businessProcessFlows.length} business process flows`);
+        console.error(`Configuring ${configuration.businessProcessFlows.length} business process flows`);
       }
 
-      console.log(`✅ Environment configuration completed`);
+      console.error(`✅ Environment configuration completed`);
       return { success: true, data: undefined };
     } catch (error) {
       console.error('❌ Failed to configure environment:', error);
@@ -424,15 +421,16 @@ export class EnvironmentManager {
     }>;
   }>> {
     try {
-      console.log(`Checking environment health: ${environmentUrl}`);
+      console.error(`Checking environment health: ${environmentUrl}`);
       
       const checks = [];
       let isHealthy = true;
 
       // Check basic connectivity
       try {
-        const schemaClient = new SchemaAwarePowerPlatformClient();
-        await schemaClient.loadSchema(environmentUrl);
+        // Note: Schema client would need proper PowerPlatformMCPClient instance
+        // For now, just check basic connectivity via admin client
+        await this.adminClient.listEnvironments();
         checks.push({
           name: 'connectivity',
           status: 'pass' as const,
@@ -453,7 +451,7 @@ export class EnvironmentManager {
       // - API responsiveness
       // - Storage capacity
 
-      console.log(`✅ Environment health check completed: ${isHealthy ? 'HEALTHY' : 'UNHEALTHY'}`);
+      console.error(`✅ Environment health check completed: ${isHealthy ? 'HEALTHY' : 'UNHEALTHY'}`);
       
       return {
         success: true,

@@ -255,6 +255,15 @@ export function createOrchestrationRouter(config: OrchestrationRouterConfig): Ro
       const { operationId } = req.params;
       console.log(`Getting operation status: ${operationId}`);
 
+      if (!operationId) {
+        res.status(400).json(createErrorResponse(
+          'INVALID_REQUEST',
+          'Operation ID is required',
+          req.headers['x-request-id'] as string || 'unknown'
+        ));
+        return;
+      }
+      
       const result = await orchestrator.getOperationStatus(operationId);
 
       if (result.success) {

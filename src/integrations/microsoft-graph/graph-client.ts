@@ -52,6 +52,7 @@ export interface ApplicationDetails {
   readonly signInAudience: string;
   readonly createdDateTime: string;
   readonly servicePrincipal?: ServicePrincipalDetails;
+  readonly clientSecret?: ClientSecretResult;
 }
 
 export interface ServicePrincipalDetails {
@@ -86,7 +87,7 @@ export class MicrosoftGraphClient {
     this.config = config;
     this.client = createMicrosoftGraphApiClient(config.accessToken);
     
-    console.log('Microsoft Graph Client initialized');
+    console.error('Microsoft Graph Client initialized');
   }
 
   // ============================================================================
@@ -98,15 +99,17 @@ export class MicrosoftGraphClient {
     options?: AppRegistrationOptions
   ): Promise<GraphResponse<ApplicationDetails>> {
     try {
-      console.log(`Creating Azure AD application: ${displayName}`);
+      console.error(`Creating Azure AD application: ${displayName}`);
       
       const request: CreateApplicationRequest = {
         displayName,
         signInAudience: options?.signInAudience || 'AzureADMyOrg',
-        requiredResourceAccess: options?.requiredPermissions?.map(perm => ({
-          resourceAppId: perm.resourceAppId,
-          resourceAccess: perm.permissions
-        }))
+        ...(options?.requiredPermissions && {
+          requiredResourceAccess: options.requiredPermissions.map(perm => ({
+            resourceAppId: perm.resourceAppId,
+            resourceAccess: perm.permissions
+          }))
+        })
       };
 
       const response = await this.client.post<CreateApplicationRequest, CreateApplicationResponse>(
@@ -133,16 +136,35 @@ export class MicrosoftGraphClient {
         }
       }
 
+      // Grant admin consent if we have a service principal and permissions
+      if (servicePrincipal && options?.requiredPermissions && options.requiredPermissions.length > 0) {
+        const consentResult = await this.grantAdminConsent(servicePrincipal.id, options.requiredPermissions);
+        if (!consentResult.success) {
+          console.error(`⚠️  Failed to grant admin consent: ${consentResult.error}`);
+        }
+      }
+
+      // Create client secret
+      let clientSecret: ClientSecretResult | undefined;
+      const secretResult = await this.createClientSecret(response.data.id, `${displayName} Secret`);
+      if (secretResult.success) {
+        clientSecret = secretResult.data;
+        console.error(`✅ Created client secret for application`);
+      } else {
+        console.error(`⚠️  Failed to create client secret: ${secretResult.error}`);
+      }
+
       const applicationDetails: ApplicationDetails = {
         id: response.data.id,
         appId: response.data.appId,
         displayName: response.data.displayName,
         signInAudience: response.data.signInAudience,
         createdDateTime: response.data.createdDateTime,
-        servicePrincipal
+        ...(servicePrincipal && { servicePrincipal }),
+        ...(clientSecret && { clientSecret })
       };
 
-      console.log(`✅ Created Azure AD application: ${applicationDetails.appId}`);
+      console.error(`✅ Created Azure AD application: ${applicationDetails.appId}`);
       return { success: true, data: applicationDetails };
     } catch (error) {
       console.error(`❌ Failed to create application ${displayName}:`, error);
@@ -155,7 +177,7 @@ export class MicrosoftGraphClient {
 
   async createServicePrincipal(appId: string): Promise<GraphResponse<ServicePrincipalDetails>> {
     try {
-      console.log(`Creating service principal for app: ${appId}`);
+      console.error(`Creating service principal for app: ${appId}`);
       
       const request: CreateServicePrincipalRequest = { appId };
 
@@ -178,7 +200,7 @@ export class MicrosoftGraphClient {
         servicePrincipalType: response.data.servicePrincipalType
       };
 
-      console.log(`✅ Created service principal: ${servicePrincipal.id}`);
+      console.error(`✅ Created service principal: ${servicePrincipal.id}`);
       return { success: true, data: servicePrincipal };
     } catch (error) {
       console.error(`❌ Failed to create service principal for ${appId}:`, error);
@@ -199,7 +221,7 @@ export class MicrosoftGraphClient {
     durationMonths: number = 24
   ): Promise<GraphResponse<ClientSecretResult>> {
     try {
-      console.log(`Creating client secret for application: ${applicationId}`);
+      console.error(`Creating client secret for application: ${applicationId}`);
       
       const expiresAt = new Date();
       expiresAt.setMonth(expiresAt.getMonth() + durationMonths);
@@ -230,10 +252,64 @@ export class MicrosoftGraphClient {
         displayName
       };
 
-      console.log(`✅ Created client secret: ${clientSecret.secretId}`);
+      console.error(`✅ Created client secret: ${clientSecret.secretId}`);
       return { success: true, data: clientSecret };
     } catch (error) {
       console.error(`❌ Failed to create client secret:`, error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error)
+      };
+    }
+  }
+
+  async grantAdminConsent(
+    servicePrincipalId: string,
+    requiredPermissions: readonly AppPermission[]
+  ): Promise<GraphResponse<void>> {
+    try {
+      console.error(`Granting admin consent for service principal: ${servicePrincipalId}`);
+      
+      // For each resource (like Dynamics CRM, PowerApps), we need to create an OAuth2PermissionGrant
+      for (const permission of requiredPermissions) {
+        // Find the service principal for the resource app
+        const resourceSpResponse = await this.client.get<{ value: ServicePrincipalDetails[] }>(
+          `/servicePrincipals?$filter=appId eq '${permission.resourceAppId}'`
+        );
+        
+        if (resourceSpResponse.status !== 200 || !resourceSpResponse.data.value.length) {
+          console.error(`Resource service principal not found for ${permission.resourceAppId}`);
+          continue;
+        }
+        
+        const resourceSp = resourceSpResponse.data.value[0];
+        
+        // Create OAuth2PermissionGrant for delegated permissions (Scope type)
+        const scopePermissions = permission.permissions.filter(p => p.type === 'Scope');
+        if (scopePermissions.length > 0) {
+          const scopes = scopePermissions.map(p => p.id).join(' ');
+          
+          const grantRequest = {
+            clientId: servicePrincipalId,
+            consentType: 'AllPrincipals',
+            principalId: null,
+            resourceId: resourceSp.id,
+            scope: scopes
+          };
+          
+          const grantResponse = await this.client.post('/oauth2PermissionGrants', grantRequest);
+          
+          if (grantResponse.status === 201) {
+            console.error(`✅ Granted admin consent for ${resourceSp.displayName} scopes`);
+          } else {
+            console.error(`⚠️  Failed to grant consent for ${resourceSp.displayName}: ${grantResponse.statusText}`);
+          }
+        }
+      }
+      
+      return { success: true, data: undefined };
+    } catch (error) {
+      console.error(`❌ Failed to grant admin consent:`, error);
       return {
         success: false,
         error: error instanceof Error ? error.message : String(error)
@@ -255,7 +331,7 @@ export class MicrosoftGraphClient {
     }
   ): Promise<GraphResponse<AppRegistrationResult>> {
     try {
-      console.log(`Creating Power Platform application: ${displayName}`);
+      console.error(`Creating Power Platform application: ${displayName}`);
       
       const permissions: AppPermission[] = [];
 
@@ -320,11 +396,11 @@ export class MicrosoftGraphClient {
 
       const result: AppRegistrationResult = {
         application: appResult.data,
-        clientSecret,
+        ...(clientSecret && { clientSecret }),
         setupInstructions
       };
 
-      console.log(`✅ Power Platform application created: ${appResult.data.appId}`);
+      console.error(`✅ Power Platform application created: ${appResult.data.appId}`);
       return { success: true, data: result };
     } catch (error) {
       console.error(`❌ Failed to create Power Platform application:`, error);
@@ -341,7 +417,7 @@ export class MicrosoftGraphClient {
 
   async getApplication(applicationId: string): Promise<GraphResponse<ApplicationDetails>> {
     try {
-      console.log(`Getting application: ${applicationId}`);
+      console.error(`Getting application: ${applicationId}`);
       
       const response = await this.client.get<any>(`/applications/${applicationId}`);
 
@@ -360,7 +436,7 @@ export class MicrosoftGraphClient {
         createdDateTime: response.data.createdDateTime
       };
 
-      console.log(`✅ Retrieved application: ${applicationDetails.displayName}`);
+      console.error(`✅ Retrieved application: ${applicationDetails.displayName}`);
       return { success: true, data: applicationDetails };
     } catch (error) {
       console.error(`❌ Failed to get application ${applicationId}:`, error);
@@ -373,7 +449,7 @@ export class MicrosoftGraphClient {
 
   async deleteApplication(applicationId: string): Promise<GraphResponse<void>> {
     try {
-      console.log(`Deleting application: ${applicationId}`);
+      console.error(`Deleting application: ${applicationId}`);
       
       const response = await this.client.delete(`/applications/${applicationId}`);
 
@@ -384,7 +460,7 @@ export class MicrosoftGraphClient {
         };
       }
 
-      console.log(`✅ Deleted application: ${applicationId}`);
+      console.error(`✅ Deleted application: ${applicationId}`);
       return { success: true, data: undefined };
     } catch (error) {
       console.error(`❌ Failed to delete application ${applicationId}:`, error);
@@ -398,27 +474,6 @@ export class MicrosoftGraphClient {
   // ============================================================================
   // Permission Management
   // ============================================================================
-
-  async grantAdminConsent(
-    servicePrincipalId: string,
-    resourceAppId: string
-  ): Promise<GraphResponse<void>> {
-    try {
-      console.log(`Granting admin consent for service principal: ${servicePrincipalId}`);
-      
-      // This would typically require elevated permissions
-      // and would call the /servicePrincipals/{id}/appRoleAssignments endpoint
-      
-      console.log(`✅ Admin consent granted (simulated)`);
-      return { success: true, data: undefined };
-    } catch (error) {
-      console.error(`❌ Failed to grant admin consent:`, error);
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : String(error)
-      };
-    }
-  }
 
   // ============================================================================
   // Helper Methods

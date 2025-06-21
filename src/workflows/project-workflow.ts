@@ -1,9 +1,7 @@
 // Project Workflow - Defines workflow steps and execution patterns
 // Provides structured workflow definitions for different project types
 
-import { 
-  ProjectTemplate
-} from '../types/data-models';
+// Workflow types and interfaces
 
 // ============================================================================
 // Workflow Types

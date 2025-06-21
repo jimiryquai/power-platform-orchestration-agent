@@ -136,7 +136,7 @@ export class AzureDevOpsClient implements IAzureDevOpsClient {
     this.config = config;
     this.retryConfig = config.retryConfig;
     
-    console.log('Azure DevOps Client initialized', {
+    console.error('Azure DevOps Client initialized', {
       organization: config.organization,
       project: config.project,
       useInteractiveAuth: config.useInteractiveAuth
@@ -149,7 +149,7 @@ export class AzureDevOpsClient implements IAzureDevOpsClient {
 
   async listProjects(): Promise<AzureDevOpsResponse<AzureDevOpsListResponse<AzureDevOpsProject>>> {
     try {
-      console.log('Listing Azure DevOps projects...');
+      console.error('Listing Azure DevOps projects...');
       
       const result = await this.executeWithRetry(() => 
         mcp__azure_devops__core_list_projects({
@@ -173,7 +173,7 @@ export class AzureDevOpsClient implements IAzureDevOpsClient {
         capabilities: proj.capabilities
       }));
 
-      console.log(`✅ Found ${projects.length} projects`);
+      console.error(`✅ Found ${projects.length} projects`);
       return {
         success: true,
         data: {
@@ -189,7 +189,7 @@ export class AzureDevOpsClient implements IAzureDevOpsClient {
 
   async getProject(projectName: string): Promise<AzureDevOpsResponse<AzureDevOpsProject>> {
     try {
-      console.log(`Getting project: ${projectName}`);
+      console.error(`Getting project: ${projectName}`);
       
       // List all projects and find the one we want
       const projectsResult = await this.listProjects();
@@ -205,7 +205,7 @@ export class AzureDevOpsClient implements IAzureDevOpsClient {
         throw new ProjectNotFoundError(projectName);
       }
 
-      console.log(`✅ Found project: ${project.name}`);
+      console.error(`✅ Found project: ${project.name}`);
       return { success: true, data: project };
     } catch (error) {
       console.error(`❌ Failed to get project ${projectName}:`, error);
@@ -222,7 +222,7 @@ export class AzureDevOpsClient implements IAzureDevOpsClient {
     workItem: WorkItemCreate
   ): Promise<AzureDevOpsResponse<WorkItemCreateResponse>> {
     try {
-      console.log(`Creating ${workItem.workItemType}: ${workItem.fields['System.Title']}`);
+      console.error(`Creating ${workItem.workItemType}: ${workItem.fields['System.Title']}`);
       
       const result = await this.executeWithRetry(() => 
         mcp__azure_devops__wit_create_work_item({
@@ -246,7 +246,7 @@ export class AzureDevOpsClient implements IAzureDevOpsClient {
         url: result.url
       };
 
-      console.log(`✅ Created work item ID: ${result.id}`);
+      console.error(`✅ Created work item ID: ${result.id}`);
       return { success: true, data: response };
     } catch (error) {
       console.error(`❌ Failed to create work item:`, error);
@@ -259,7 +259,7 @@ export class AzureDevOpsClient implements IAzureDevOpsClient {
     updates: Partial<WorkItemFields>
   ): Promise<AzureDevOpsResponse<WorkItemUpdateResponse>> {
     try {
-      console.log(`Updating work item ${id}`);
+      console.error(`Updating work item ${id}`);
       
       // Convert partial updates to patch operations
       const patchOperations = Object.entries(updates).map(([field, value]) => ({
@@ -286,7 +286,7 @@ export class AzureDevOpsClient implements IAzureDevOpsClient {
         url: result.url
       };
 
-      console.log(`✅ Updated work item ID: ${id}`);
+      console.error(`✅ Updated work item ID: ${id}`);
       return { success: true, data: response };
     } catch (error) {
       console.error(`❌ Failed to update work item ${id}:`, error);
@@ -300,7 +300,7 @@ export class AzureDevOpsClient implements IAzureDevOpsClient {
     expand?: string
   ): Promise<AzureDevOpsResponse<WorkItem>> {
     try {
-      console.log(`Getting work item ${id}`);
+      console.error(`Getting work item ${id}`);
       
       const result = await this.executeWithRetry(() => 
         mcp__azure_devops__wit_get_work_item({
@@ -323,7 +323,7 @@ export class AzureDevOpsClient implements IAzureDevOpsClient {
         _links: result._links
       };
 
-      console.log(`✅ Retrieved work item ${id}: ${workItem.fields['System.Title']}`);
+      console.error(`✅ Retrieved work item ${id}: ${workItem.fields['System.Title']}`);
       return { success: true, data: workItem };
     } catch (error) {
       console.error(`❌ Failed to get work item ${id}:`, error);
@@ -335,7 +335,7 @@ export class AzureDevOpsClient implements IAzureDevOpsClient {
     relationships: WorkItemRelationship[]
   ): Promise<AzureDevOpsResponse<void>> {
     try {
-      console.log(`Creating ${relationships.length} work item relationships`);
+      console.error(`Creating ${relationships.length} work item relationships`);
       
       // Group relationships by project (assuming all are in the same project for now)
       const updates = relationships.map(rel => ({
@@ -352,7 +352,7 @@ export class AzureDevOpsClient implements IAzureDevOpsClient {
         })
       );
 
-      console.log(`✅ Created ${relationships.length} work item relationships`);
+      console.error(`✅ Created ${relationships.length} work item relationships`);
       return { success: true, data: undefined };
     } catch (error) {
       console.error(`❌ Failed to link work items:`, error);
@@ -369,7 +369,7 @@ export class AzureDevOpsClient implements IAzureDevOpsClient {
     batch: WorkItemBatch
   ): Promise<AzureDevOpsResponse<WorkItemBatchResult>> {
     try {
-      console.log('Creating work item batch:', {
+      console.error('Creating work item batch:', {
         epics: batch.epics.length,
         features: batch.features.length,
         userStories: batch.userStories.length,
@@ -408,7 +408,7 @@ export class AzureDevOpsClient implements IAzureDevOpsClient {
         relationships
       };
 
-      console.log(`✅ Batch creation complete: ${created.length} created, ${failed.length} failed`);
+      console.error(`✅ Batch creation complete: ${created.length} created, ${failed.length} failed`);
       return { success: true, data: result };
     } catch (error) {
       console.error('❌ Failed to create work item batch:', error);
@@ -420,7 +420,7 @@ export class AzureDevOpsClient implements IAzureDevOpsClient {
     updates: WorkItemUpdate[]
   ): Promise<AzureDevOpsResponse<WorkItem[]>> {
     try {
-      console.log(`Batch updating ${updates.length} work items`);
+      console.error(`Batch updating ${updates.length} work items`);
       
       // Convert updates to patch format
       const batchUpdates = updates.flatMap(update => 
@@ -451,7 +451,7 @@ export class AzureDevOpsClient implements IAzureDevOpsClient {
         _links: item._links
       }));
 
-      console.log(`✅ Batch updated ${updatedWorkItems.length} work items`);
+      console.error(`✅ Batch updated ${updatedWorkItems.length} work items`);
       return { success: true, data: updatedWorkItems };
     } catch (error) {
       console.error('❌ Failed to batch update work items:', error);
@@ -467,7 +467,7 @@ export class AzureDevOpsClient implements IAzureDevOpsClient {
     project: string
   ): Promise<AzureDevOpsResponse<AzureDevOpsListResponse<Repository>>> {
     try {
-      console.log(`Listing repositories for project: ${project}`);
+      console.error(`Listing repositories for project: ${project}`);
       
       const result = await this.executeWithRetry(() => 
         mcp__azure_devops__repo_list_repos_by_project({ project })
@@ -489,7 +489,7 @@ export class AzureDevOpsClient implements IAzureDevOpsClient {
         defaultBranch: repo.defaultBranch
       }));
 
-      console.log(`✅ Found ${repositories.length} repositories`);
+      console.error(`✅ Found ${repositories.length} repositories`);
       return {
         success: true,
         data: {
@@ -508,7 +508,7 @@ export class AzureDevOpsClient implements IAzureDevOpsClient {
     pullRequest: PullRequestCreateRequest
   ): Promise<AzureDevOpsResponse<PullRequest>> {
     try {
-      console.log(`Creating pull request: ${pullRequest.title}`);
+      console.error(`Creating pull request: ${pullRequest.title}`);
       
       const result = await this.executeWithRetry(() => 
         mcp__azure_devops__repo_create_pull_request({
@@ -534,7 +534,7 @@ export class AzureDevOpsClient implements IAzureDevOpsClient {
         url: result.url
       };
 
-      console.log(`✅ Created pull request ID: ${result.pullRequestId}`);
+      console.error(`✅ Created pull request ID: ${result.pullRequestId}`);
       return { success: true, data: response };
     } catch (error) {
       console.error('❌ Failed to create pull request:', error);
@@ -550,7 +550,7 @@ export class AzureDevOpsClient implements IAzureDevOpsClient {
     project: string
   ): Promise<AzureDevOpsResponse<AzureDevOpsListResponse<BuildDefinition>>> {
     try {
-      console.log(`Getting build definitions for project: ${project}`);
+      console.error(`Getting build definitions for project: ${project}`);
       
       const result = await this.executeWithRetry(() => 
         mcp__azure_devops__build_get_definitions({ project })
@@ -572,7 +572,7 @@ export class AzureDevOpsClient implements IAzureDevOpsClient {
         project: def.project
       }));
 
-      console.log(`✅ Found ${buildDefinitions.length} build definitions`);
+      console.error(`✅ Found ${buildDefinitions.length} build definitions`);
       return {
         success: true,
         data: {
@@ -592,7 +592,7 @@ export class AzureDevOpsClient implements IAzureDevOpsClient {
     sourceBranch?: string
   ): Promise<AzureDevOpsResponse<Build>> {
     try {
-      console.log(`Running build definition ${definitionId} for project: ${project}`);
+      console.error(`Running build definition ${definitionId} for project: ${project}`);
       
       const result = await this.executeWithRetry(() => 
         mcp__azure_devops__build_run_build({
@@ -621,7 +621,7 @@ export class AzureDevOpsClient implements IAzureDevOpsClient {
         sourceVersion: result.sourceVersion
       };
 
-      console.log(`✅ Started build ID: ${result.id}`);
+      console.error(`✅ Started build ID: ${result.id}`);
       return { success: true, data: build };
     } catch (error) {
       console.error(`❌ Failed to run build ${definitionId}:`, error);
@@ -634,7 +634,7 @@ export class AzureDevOpsClient implements IAzureDevOpsClient {
     buildId: number
   ): Promise<AzureDevOpsResponse<Build>> {
     try {
-      console.log(`Getting build status for build ${buildId}`);
+      console.error(`Getting build status for build ${buildId}`);
       
       const result = await this.executeWithRetry(() => 
         mcp__azure_devops__build_get_status({
@@ -662,7 +662,7 @@ export class AzureDevOpsClient implements IAzureDevOpsClient {
         sourceVersion: result.sourceVersion
       };
 
-      console.log(`✅ Build ${buildId} status: ${build.status}`);
+      console.error(`✅ Build ${buildId} status: ${build.status}`);
       return { success: true, data: build };
     } catch (error) {
       console.error(`❌ Failed to get build status for ${buildId}:`, error);
@@ -676,7 +676,7 @@ export class AzureDevOpsClient implements IAzureDevOpsClient {
 
   async listTeams(project: string): Promise<AzureDevOpsResponse<AzureDevOpsListResponse<Team>>> {
     try {
-      console.log(`Listing teams for project: ${project}`);
+      console.error(`Listing teams for project: ${project}`);
       
       const result = await this.executeWithRetry(() => 
         mcp__azure_devops__core_list_project_teams({ project })
@@ -696,7 +696,7 @@ export class AzureDevOpsClient implements IAzureDevOpsClient {
         projectName: team.projectName
       }));
 
-      console.log(`✅ Found ${teams.length} teams`);
+      console.error(`✅ Found ${teams.length} teams`);
       return {
         success: true,
         data: {
@@ -781,7 +781,7 @@ export class AzureDevOpsClient implements IAzureDevOpsClient {
           this.retryConfig.maxDelayMs
         );
         
-        console.log(`Retry attempt ${attempt}/${this.retryConfig.maxAttempts} after ${delay}ms`);
+        console.error(`Retry attempt ${attempt}/${this.retryConfig.maxAttempts} after ${delay}ms`);
         await new Promise(resolve => setTimeout(resolve, delay));
       }
     }
