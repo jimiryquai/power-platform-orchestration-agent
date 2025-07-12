@@ -139,7 +139,7 @@ describe('API Contract Type Guards', () => {
     test('should reject invalid operation statuses', () => {
       expect(validateOperationStatus('invalid')).toBe(false);
       expect(validateOperationStatus('')).toBe(false);
-      expect(validateOperationStatus(123)).toBe(false);
+      expect(validateOperationStatus(123 as any)).toBe(false);
     });
   });
 });

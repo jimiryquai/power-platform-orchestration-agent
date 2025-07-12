@@ -1,0 +1,24 @@
+{
+  "mcpServers": {
+    "power-platform-orchestrator": {
+      "command": "wsl",
+      "args": [
+        "node",
+        "/home/jimiryquai/repos/power-platform-orchestration-agent/dist/working-minimal-server.js"
+      ],
+      "cwd": "/home/jimiryquai/repos/power-platform-orchestration-agent",
+      "env": {
+        "AZURE_DEVOPS_ORG": "jamesryandev",
+        "AZURE_DEVOPS_PAT": "4uyeQL4elPHIQEH4y5PSm7nYdUizzjHaRwjkovgg5rebhoYOQiBwJQQJ99BFACAAAAA6SZTrAAASAZDO1rHZ",
+        "AZURE_TENANT_ID": "92f292bf-d44c-427e-b092-c466178e9ffa",
+        "AZURE_USE_INTERACTIVE_AUTH": "true",
+        "POWER_PLATFORM_ENVIRONMENT_URL": "https://james-dev.crm11.dynamics.com/api/data/v9.2",
+        "SKIP_ENVIRONMENT_CREATION": "true",
+        "USE_EXISTING_ENVIRONMENT": "true",
+        "POWER_PLATFORM_DEFAULT_REGION": "unitedstates",
+        "ENABLE_PARALLEL_EXECUTION": "true",
+        "DEBUG_LOGGING": "true"
+      }
+    }
+  }
+}

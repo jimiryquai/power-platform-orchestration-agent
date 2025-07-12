@@ -12,9 +12,6 @@ import {
   AddSolutionComponentRequest
 } from '../../types/api-contracts';
 import { 
-  PowerPlatformConfig,
-  DataversePublisher,
-  DataverseSolution,
   EnvironmentInfo,
   EnvironmentType,
   EnvironmentStatus
@@ -98,7 +95,7 @@ export class PowerPlatformAdminClient {
       }
 
       console.log(`✅ Found ${response.data.value.length} environments`);
-      return { success: true, data: response.data.value };
+      return { success: true, data: [...response.data.value] };
     } catch (error) {
       console.error('❌ Failed to list environments:', error);
       return { 
@@ -151,8 +148,8 @@ export class PowerPlatformAdminClient {
         location: options?.region || this.config.defaultRegion || 'unitedstates',
         environmentSku: options?.sku || this.mapEnvironmentTypeToSku(environmentType),
         databaseType: options?.databaseType || 'CommonDataService',
-        currency: options?.currency ? { code: options.currency } : undefined,
-        language: options?.language ? { name: options.language } : undefined
+        ...(options?.currency && { currency: { code: options.currency } }),
+        ...(options?.language && { language: { name: options.language } })
       };
 
       const response = await this.client.post<CreateEnvironmentRequest, CreateEnvironmentResponse>(
@@ -174,7 +171,12 @@ export class PowerPlatformAdminClient {
           type: response.data.type,
           location: response.data.location,
           displayName: response.data.displayName,
-          properties: response.data.properties
+          properties: {
+            displayName: response.data.properties.displayName,
+            environmentSku: response.data.properties.environmentSku,
+            provisioningState: response.data.properties.provisioningState,
+            linkedEnvironmentMetadata: response.data.properties.linkedEnvironmentMetadata
+          }
         },
         instanceUrl: response.data.properties.linkedEnvironmentMetadata?.instanceUrl,
         uniqueName: response.data.properties.linkedEnvironmentMetadata?.uniqueName
@@ -276,9 +278,9 @@ export class PowerPlatformAdminClient {
       const request: CreateSolutionRequest = {
         uniquename: solutionName,
         friendlyname: friendlyName,
-        description: options?.description,
         version: options?.version || '1.0.0.0',
-        publisherid: publisherId
+        publisherid: publisherId,
+        ...(options?.description && { description: options.description })
       };
 
       // Use Dataverse API directly for solution creation
@@ -331,7 +333,9 @@ export class PowerPlatformAdminClient {
         ComponentId: componentId,
         SolutionUniqueName: solutionUniqueName,
         AddRequiredComponents: options?.addRequiredComponents ?? true,
-        IncludedComponentSettingsValues: options?.includedComponentSettingsValues
+        ...(options?.includedComponentSettingsValues && {
+          IncludedComponentSettingsValues: options.includedComponentSettingsValues
+        })
       };
 
       const dataverseClient = this.createDataverseClient(environmentUrl);
@@ -433,6 +437,9 @@ export class PowerPlatformAdminClient {
   }
 
   private createDataverseClient(environmentUrl: string): ApiClient {
+    // Create a Dataverse client for the specific environment
+    // For now, using admin client - in production this should use environment-specific endpoint
+    console.log(`Creating Dataverse client for environment: ${environmentUrl}`);
     return createPowerPlatformAdminApiClient(this.config.accessToken);
   }
 

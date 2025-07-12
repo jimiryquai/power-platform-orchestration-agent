@@ -160,7 +160,7 @@ describe('MCP Server Integration Tests', () => {
         undefined
       ];
 
-      invalidInputs.forEach((input, index) => {
+      invalidInputs.forEach((input, _index) => {
         // In a real test, we'd call the actual MCP tool and expect proper error handling
         const isInvalid = !input || !input.projectName || !input.templateName;
         expect(isInvalid).toBe(true);
@@ -282,7 +282,7 @@ describe('MCP Server Integration Tests', () => {
         }
       };
 
-      Object.entries(templateDetails).forEach(([templateName, details]) => {
+      Object.entries(templateDetails).forEach(([_templateName, details]) => {
         expect(details.estimatedDuration).toBeDefined();
         expect(details.complexity).toBeDefined();
         expect(Array.isArray(details.phases)).toBe(true);
@@ -348,7 +348,7 @@ describe('MCP Server Integration Tests', () => {
         { projectName: '', description: 'Test', requirements: {} }
       ];
 
-      incompletePrds.forEach((prd, index) => {
+      incompletePrds.forEach((prd, _index) => {
         const hasProjectName = prd.projectName && prd.projectName.length > 0;
         const hasDescription = prd.description && prd.description.length > 0;
         const hasRequirements = prd.requirements && typeof prd.requirements === 'object';

@@ -250,9 +250,10 @@ describe('Orchestration Integration Tests', () => {
       
       expect(result).toBeDefined();
       expect(result.success).toBe(false);
-      expect(result.error).toContain('not found');
-      
-      console.log(`✅ Non-existent operation handled correctly: ${result.error}`);
+      if (!result.success) {
+        expect(result.error).toContain('not found');
+        console.log(`✅ Non-existent operation handled correctly: ${result.error}`);
+      }
     });
   });
 

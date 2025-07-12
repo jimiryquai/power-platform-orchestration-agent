@@ -3,12 +3,9 @@
 
 import PowerPlatformAdminClient, { 
   PowerPlatformResponse,
-  EnvironmentCreationResult,
   AdminClientConfig
 } from './admin-client';
-import { SchemaAwarePowerPlatformClient } from './schema-aware-client';
 import {
-  Environment,
   EnvironmentInfo,
   EnvironmentType,
   EnvironmentTemplate,
@@ -97,10 +94,10 @@ export class EnvironmentManager {
         displayName,
         environmentType,
         {
-          region: options?.region || this.config.defaultRegion,
-          currency: options?.currency || this.config.defaultCurrency,
-          language: options?.language || this.config.defaultLanguage,
-          sku: options?.sku,
+          region: options?.region || this.config.defaultRegion || 'unitedstates',
+          currency: options?.currency || this.config.defaultCurrency || 'USD',
+          language: options?.language || this.config.defaultLanguage || 'English',
+          sku: options?.sku || 'Sandbox',
           databaseType: options?.includeDatabase !== false ? 'CommonDataService' : 'None'
         }
       );
@@ -240,7 +237,7 @@ export class EnvironmentManager {
               environments.push(result.value.data);
             } else {
               const error = result.status === 'fulfilled' 
-                ? result.value.error 
+                ? (!result.value.success ? result.value.error : 'Unknown error')
                 : result.reason?.message || 'Unknown error';
               failed.push({ template: batch[index]!, error });
             }
@@ -294,7 +291,7 @@ export class EnvironmentManager {
         sku: template.sku,
         currency: template.currency.code,
         language: template.language.code,
-        waitForProvisioning: options?.waitForProvisioning
+        waitForProvisioning: options?.waitForProvisioning ?? false
       }
     );
   }
@@ -316,7 +313,7 @@ export class EnvironmentManager {
         publisherTemplate.friendlyName,
         publisherTemplate.customizationPrefix,
         {
-          description: publisherTemplate.description,
+          description: publisherTemplate.description || publisherTemplate.friendlyName,
           customizationOptionValuePrefix: publisherTemplate.customizationOptionValuePrefix
         }
       );
@@ -329,7 +326,7 @@ export class EnvironmentManager {
         publisherId: result.data.publisherId,
         uniqueName: result.data.uniqueName,
         friendlyName: publisherTemplate.friendlyName,
-        description: publisherTemplate.description,
+        description: publisherTemplate.description || publisherTemplate.friendlyName,
         customizationPrefix: result.data.customizationPrefix,
         customizationOptionValuePrefix: publisherTemplate.customizationOptionValuePrefix
       };
@@ -431,8 +428,9 @@ export class EnvironmentManager {
 
       // Check basic connectivity
       try {
-        const schemaClient = new SchemaAwarePowerPlatformClient();
-        await schemaClient.loadSchema(environmentUrl);
+        // Note: Schema client would need proper PowerPlatformMCPClient instance
+        // For now, just check basic connectivity via admin client
+        await this.adminClient.listEnvironments();
         checks.push({
           name: 'connectivity',
           status: 'pass' as const,

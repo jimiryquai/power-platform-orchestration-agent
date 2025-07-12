@@ -323,6 +323,7 @@ export interface CreateEnvironmentResponse {
     readonly displayName: string;
     readonly createdTime: string;
     readonly environmentSku: string;
+    readonly provisioningState: 'Succeeded' | 'Failed' | 'Accepted' | 'Running' | 'Ready' | 'NotSpecified';
     readonly linkedEnvironmentMetadata?: {
       readonly instanceUrl: string;
       readonly uniqueName: string;
@@ -345,10 +346,11 @@ export interface Environment {
   readonly properties: {
     readonly displayName: string;
     readonly environmentSku: string;
-    readonly provisioningState: string;
+    readonly provisioningState: 'Succeeded' | 'Failed' | 'Accepted' | 'Running' | 'Ready' | 'NotSpecified';
     readonly linkedEnvironmentMetadata?: {
       readonly instanceUrl: string;
       readonly uniqueName: string;
+      readonly version?: string;
     };
   };
 }
@@ -416,7 +418,7 @@ export interface CreateProjectApiResponse {
     readonly currentStep?: string;
   };
   readonly result?: {
-    readonly azureDevOpsProject: {
+    readonly azureDevOpsProject?: {
       readonly id: string;
       readonly url: string;
     };

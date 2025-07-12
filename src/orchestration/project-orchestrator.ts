@@ -11,9 +11,7 @@ import MicrosoftGraphClient from '../integrations/microsoft-graph/graph-client';
 import {
   OrchestrationProject,
   ProjectTemplate,
-  ProjectStatus,
   AzureDevOpsProjectInfo,
-  PowerPlatformProjectInfo,
   EnvironmentInfo,
   AzureDevOpsConfig,
   PowerPlatformConfig
@@ -117,14 +115,27 @@ export class ProjectOrchestrator {
     this.config = config;
     
     // Initialize clients
-    this.azureDevOpsClient = new AzureDevOpsClient(config.azureDevOps);
+    this.azureDevOpsClient = new AzureDevOpsClient({
+      ...config.azureDevOps,
+      timeoutMs: config.azureDevOps.timeoutMs || 30000,
+      retryConfig: config.azureDevOps.retryConfig ? {
+        ...config.azureDevOps.retryConfig,
+        retryableErrors: [...config.azureDevOps.retryConfig.retryableErrors]
+      } : {
+        maxAttempts: 3,
+        baseDelayMs: 1000,
+        backoffMultiplier: 2,
+        maxDelayMs: 30000,
+        retryableErrors: ['RATE_LIMIT_EXCEEDED', 'SERVER_ERROR', 'NETWORK_ERROR']
+      }
+    });
     
     this.environmentManager = new EnvironmentManager({
       adminClient: {
         accessToken: config.powerPlatform.environmentUrl || '', // This would come from auth
-        defaultRegion: config.defaultRegion
+        defaultRegion: config.defaultRegion || 'unitedstates'
       },
-      defaultRegion: config.defaultRegion
+      defaultRegion: config.defaultRegion || 'unitedstates'
     });
 
     this.solutionManager = new SolutionManager({
@@ -160,7 +171,7 @@ export class ProjectOrchestrator {
       console.log(`🚀 Starting project orchestration: ${request.projectName}`);
       
       // Initialize operation tracking
-      const operation = this.initializeOperation(operationId, request.projectName);
+      this.initializeOperation(operationId, request.projectName);
       
       if (options?.dryRun) {
         return this.performDryRun(request, operationId);
@@ -218,17 +229,29 @@ export class ProjectOrchestrator {
 
       const executionTimeMs = Date.now() - startTime;
       
-      // Update final project status
-      project.status = warnings.length > 0 ? 'completed' : 'completed';
+      // Update final project status - create new object to avoid readonly property issue
+      const updatedProject = {
+        ...project,
+        status: 'completed' as const
+      };
       
       const result: ProjectCreationResult = {
-        project,
-        azureDevOps: azureDevOpsResult,
-        powerPlatform: powerPlatformResult,
-        appRegistration: appRegistrationResult,
+        project: updatedProject,
         executionTimeMs,
         warnings
       };
+      
+      if (azureDevOpsResult) {
+        (result as any).azureDevOps = azureDevOpsResult;
+      }
+      
+      if (powerPlatformResult) {
+        (result as any).powerPlatform = powerPlatformResult;
+      }
+      
+      if (appRegistrationResult) {
+        (result as any).appRegistration = appRegistrationResult;
+      }
 
       this.completeOperation(operationId, 'completed', result);
 
@@ -241,16 +264,19 @@ export class ProjectOrchestrator {
           currentStep: 'Completed'
         },
         result: {
-          azureDevOpsProject: azureDevOpsResult ? {
-            id: azureDevOpsResult.projectId,
-            url: azureDevOpsResult.projectUrl
-          } : undefined,
           powerPlatformEnvironments: powerPlatformResult?.environments.map(env => ({
             name: env.environmentName,
             url: env.environmentUrl
           })) || []
         }
       };
+      
+      if (azureDevOpsResult?.projectId && azureDevOpsResult?.projectUrl) {
+        (response.result as any).azureDevOpsProject = {
+          id: azureDevOpsResult.projectId,
+          url: azureDevOpsResult.projectUrl
+        };
+      }
 
       console.log(`✅ Project orchestration completed: ${request.projectName} in ${executionTimeMs}ms`);
       return { success: true, data: response };
@@ -417,11 +443,16 @@ export class ProjectOrchestrator {
       throw new Error(`Failed to create application: ${result.error}`);
     }
 
-    return {
+    const appResult: { readonly applicationId: string; readonly clientId: string; readonly servicePrincipalId?: string } = {
       applicationId: result.data.application.id,
-      clientId: result.data.application.appId,
-      servicePrincipalId: result.data.application.servicePrincipal?.id
+      clientId: result.data.application.appId
     };
+    
+    if (result.data.application.servicePrincipal?.id) {
+      (appResult as any).servicePrincipalId = result.data.application.servicePrincipal.id;
+    }
+    
+    return appResult;
   }
 
   private async executeAzureDevOpsPhase(
@@ -476,12 +507,12 @@ export class ProjectOrchestrator {
       projectId: projectInfo.projectId,
       projectUrl: projectInfo.projectUrl,
       workItemsCreated: workItemResult.workItemsCreated.length,
-      repositoryUrl: projectInfo.repositoryUrl
+      ...(projectInfo.repositoryUrl && { repositoryUrl: projectInfo.repositoryUrl })
     };
   }
 
   private async executePowerPlatformPhase(
-    project: OrchestrationProject,
+    _project: OrchestrationProject,
     template: ProjectTemplate,
     operationId: string
   ): Promise<ProjectCreationResult['powerPlatform']> {
@@ -537,7 +568,7 @@ export class ProjectOrchestrator {
     return {
       environments,
       solutionsCreated,
-      publisherId
+      ...(publisherId && { publisherId })
     };
   }
 
@@ -559,7 +590,7 @@ export class ProjectOrchestrator {
       operationId: operation.operationId,
       status: operation.status,
       startedAt: operation.startedAt.toISOString(),
-      completedAt: operation.completedAt?.toISOString(),
+      ...(operation.completedAt && { completedAt: operation.completedAt.toISOString() }),
       progress: operation.progress,
       logs: operation.logs
     };
@@ -645,7 +676,7 @@ export class ProjectOrchestrator {
     operationId: string,
     projectName: string,
     template: ProjectTemplate,
-    customization?: Record<string, unknown>
+    _customization?: Record<string, unknown>
   ): OrchestrationProject {
     return {
       id: operationId,
@@ -661,7 +692,7 @@ export class ProjectOrchestrator {
   }
 
   private performDryRun(
-    request: CreateProjectApiRequest,
+    _request: CreateProjectApiRequest,
     operationId: string
   ): OrchestrationResponse<CreateProjectApiResponse> {
     console.log('🏃 Performing dry run - no resources will be created');
@@ -728,17 +759,20 @@ export class ProjectOrchestrator {
     const operation = this.activeOperations.get(operationId);
     if (!operation) return;
 
-    operation.status = status;
-    operation.logs = [
-      ...operation.logs,
-      {
-        timestamp: new Date().toISOString(),
-        level: 'info',
-        message
-      }
-    ];
+    const updatedOperation: OperationProgress = {
+      ...operation,
+      status,
+      logs: [
+        ...operation.logs,
+        {
+          timestamp: new Date().toISOString(),
+          level: 'info',
+          message
+        }
+      ]
+    };
 
-    this.activeOperations.set(operationId, operation);
+    this.activeOperations.set(operationId, updatedOperation);
     console.log(`[${operationId}] ${message}`);
   }
 
@@ -751,9 +785,6 @@ export class ProjectOrchestrator {
     const operation = this.activeOperations.get(operationId);
     if (!operation) return;
 
-    operation.status = status;
-    operation.completedAt = new Date();
-    
     const logEntry = {
       timestamp: new Date().toISOString(),
       level: (status === 'failed' ? 'error' : 'info') as LogLevel,
@@ -763,9 +794,14 @@ export class ProjectOrchestrator {
       details: error || result
     };
 
-    operation.logs = [...operation.logs, logEntry];
+    const completedOperation: OperationProgress = {
+      ...operation,
+      status,
+      completedAt: new Date(),
+      logs: [...operation.logs, logEntry]
+    };
     
-    this.activeOperations.set(operationId, operation);
+    this.activeOperations.set(operationId, completedOperation);
   }
 }
 

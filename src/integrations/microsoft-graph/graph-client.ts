@@ -103,10 +103,12 @@ export class MicrosoftGraphClient {
       const request: CreateApplicationRequest = {
         displayName,
         signInAudience: options?.signInAudience || 'AzureADMyOrg',
-        requiredResourceAccess: options?.requiredPermissions?.map(perm => ({
-          resourceAppId: perm.resourceAppId,
-          resourceAccess: perm.permissions
-        }))
+        ...(options?.requiredPermissions && {
+          requiredResourceAccess: options.requiredPermissions.map(perm => ({
+            resourceAppId: perm.resourceAppId,
+            resourceAccess: perm.permissions
+          }))
+        })
       };
 
       const response = await this.client.post<CreateApplicationRequest, CreateApplicationResponse>(
@@ -139,7 +141,7 @@ export class MicrosoftGraphClient {
         displayName: response.data.displayName,
         signInAudience: response.data.signInAudience,
         createdDateTime: response.data.createdDateTime,
-        servicePrincipal
+        ...(servicePrincipal && { servicePrincipal })
       };
 
       console.log(`✅ Created Azure AD application: ${applicationDetails.appId}`);
@@ -320,7 +322,7 @@ export class MicrosoftGraphClient {
 
       const result: AppRegistrationResult = {
         application: appResult.data,
-        clientSecret,
+        ...(clientSecret && { clientSecret }),
         setupInstructions
       };
 
@@ -401,7 +403,7 @@ export class MicrosoftGraphClient {
 
   async grantAdminConsent(
     servicePrincipalId: string,
-    resourceAppId: string
+    _resourceAppId: string
   ): Promise<GraphResponse<void>> {
     try {
       console.log(`Granting admin consent for service principal: ${servicePrincipalId}`);
